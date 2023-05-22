@@ -177,7 +177,7 @@ int executeAndWait(
   }
 
   const std::vector<llvm::StringRef> argv = toRefsVector(fullArgs);
-  auto envVars = llvm::None;
+  auto envVars = std::nullopt;
 
   return llvm::sys::ExecuteAndWait(argv[0], argv, envVars, {}, 0, 0, errorMsg);
 }
