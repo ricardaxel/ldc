@@ -4867,7 +4867,7 @@ public:
 
                 if (fd.ident == Id._d_arrayappendT)
                 {
-                    assert(e.arguments.length == 2);
+                    /* assert(e.arguments.length == 2); */
                     lhs = (*e.arguments)[0];
                     rhs = (*e.arguments)[1];
                 }
@@ -5050,7 +5050,7 @@ public:
             // `_d_arrayappendcTX(arr, elem), arr[arr.length - 1] = elem, elem;`.
             // The following code will rewrite it back to `arr ~= elem`
             // and then interpret that expression.
-            assert(ce.arguments.length == 2);
+            /* assert(ce.arguments.length == 2); */
 
             auto arr = (*ce.arguments)[0];
             auto elem = e.e2.isConstructExp().e2;

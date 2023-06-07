@@ -331,6 +331,9 @@ llvm::Function *getRuntimeFunction(const Loc &loc, llvm::Module &target,
 
   if (LLFunction *existing = target.getFunction(name)) {
     if (existing->getFunctionType() != fnty) {
+      /* fnty->dump(); */
+      /* existing->getFunctionType()->dump(); */
+      /* target.dump(); */
       error(Loc(), "Incompatible declaration of runtime function `%s`", name);
       fatal();
     }
@@ -586,28 +589,31 @@ static void buildRuntimeModule() {
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
 
-  // void* _d_allocmemory(size_t sz)
-  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemory"}, {sizeTy});
+  // void* _d_allocmemory(size_t sz, string file, uint line, string capturedData)
+  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemory"}, {sizeTy, stringTy, uintTy, stringTy});
 
-  // void* _d_allocmemoryT(TypeInfo ti)
-  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemoryT"}, {typeInfoTy});
+  // void* _d_allocmemoryT(TypeInfo ti, string file, uint line)
+  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemoryT"}, {typeInfoTy, stringTy, uintTy});
 
-  // void[] _d_newarrayT (const TypeInfo ti, size_t length)
-  // void[] _d_newarrayiT(const TypeInfo ti, size_t length)
-  // void[] _d_newarrayU (const TypeInfo ti, size_t length)
+  // void[] _d_newarrayT (const TypeInfo ti, size_t length, string file, uint line)
+  // void[] _d_newarrayiT(const TypeInfo ti, size_t length, string file, uint line)
+  // void[] _d_newarrayU (const TypeInfo ti, size_t length, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy,
                 {"_d_newarrayT", "_d_newarrayiT", "_d_newarrayU"},
-                {typeInfoTy, sizeTy}, {STCconst, 0});
+                {typeInfoTy, sizeTy, stringTy, uintTy}, {STCconst, 0});
 
-  // void[] _d_arrayappendcd(ref byte[] x, dchar c)
-  // void[] _d_arrayappendwd(ref byte[] x, dchar c)
+  // void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line)
+  // void[] _d_arrayappendwd(ref byte[] x, dchar c, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arrayappendcd", "_d_arrayappendwd"},
-                {voidArrayTy, dcharTy}, {STCref, 0});
+                {voidArrayTy, dcharTy,  stringTy, uintTy}, {STCref, 0});
 
   // Object _d_newclass(const ClassInfo ci)
-  // Object _d_allocclass(const ClassInfo ci)
-  createFwdDecl(LINK::c, objectTy, {"_d_newclass", "_d_allocclass"},
+  createFwdDecl(LINK::c, objectTy, {"_d_newclass"},
                 {classInfoTy}, {STCconst});
+
+  // Object _d_allocclass(const ClassInfo ci)
+  createFwdDecl(LINK::c, objectTy, {"_d_allocclass"},
+                {classInfoTy, stringTy, uintTy}, {STCconst});
 
   // Throwable _d_newThrowable(const ClassInfo ci)
   createFwdDecl(LINK::c, throwableTy, {"_d_newThrowable"}, {classInfoTy},
@@ -715,9 +721,10 @@ static void buildRuntimeModule() {
   //////////////////////////////////////////////////////////////////////////////
 
   // void* _aaGetY(AA* aa, const TypeInfo aati, in size_t valuesize,
-  //               in void* pkey)
+  //               in void* pkey, string file, uint line)
   createFwdDecl(LINK::c, voidPtrTy, {"_aaGetY"},
-                {pointerTo(aaTy), aaTypeInfoTy, sizeTy, voidPtrTy},
+                {pointerTo(aaTy), aaTypeInfoTy, sizeTy, voidPtrTy,
+                 stringTy, uintTy},
                 {0, STCconst, STCin, STCin}, Attr_1_4_NoCapture);
 
   // inout(void)* _aaInX(inout AA aa, in TypeInfo keyti, in void* pkey)
@@ -734,12 +741,13 @@ static void buildRuntimeModule() {
                 {STCin, STCin, STCin}, Attr_1_2_NoCapture);
 
   // AA _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti,
-  //                           void[] keys, void[] values)
+  //                           void[] keys, void[] values,
+  //                           string file, uint line)
   createFwdDecl(LINK::c, aaTy, {"_d_assocarrayliteralTX"},
-                {aaTypeInfoTy, voidArrayTy, voidArrayTy}, {STCconst, 0, 0});
+                {aaTypeInfoTy, voidArrayTy, voidArrayTy, /*stringTy, uintTy*/}, {STCconst, 0, 0});
 
-  // AA _aaNew(const TypeInfo_AssociativeArray ti)
-  createFwdDecl(LINK::c, aaTy, {"_aaNew"}, {aaTypeInfoTy}, {STCconst});
+  // AA _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
+  createFwdDecl(LINK::c, aaTy, {"_aaNew"}, {aaTypeInfoTy, stringTy, uintTy}, {STCconst});
 
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////

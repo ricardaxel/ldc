@@ -13,6 +13,8 @@
  */
 module core.gc.gcinterface;
 
+import core.internal.gc.gcdebug: DebugInfo;
+
 static import core.memory;
 alias BlkAttr = core.memory.GC.BlkAttr;
 alias BlkInfo = core.memory.GC.BlkInfo;
@@ -76,17 +78,19 @@ interface GC
     /**
      *
      */
-    void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow;
+    void* malloc(size_t size, uint bits, const TypeInfo ti,
+                 DebugInfo di = DebugInfo.init) nothrow;
+    /*
+     *
+     */
+    BlkInfo qalloc(size_t size, uint bits, const TypeInfo ti,
+                   DebugInfo di = DebugInfo.init) nothrow;
 
     /*
      *
      */
-    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti) nothrow;
-
-    /*
-     *
-     */
-    void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow;
+    void* calloc(size_t size, uint bits, const TypeInfo ti,
+                 DebugInfo di = DebugInfo.init) nothrow;
 
     /*
      *

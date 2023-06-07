@@ -14,7 +14,6 @@
  */
 
 module rt.tracegc;
-
 version (LDC) { /* -profile=gc not supported yet */ } else:
 
 // version = tracegc;

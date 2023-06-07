@@ -41,9 +41,12 @@ import core.gc.gcinterface;
 import core.internal.container.treap;
 import core.internal.spinlock;
 import core.internal.gc.pooltable;
+import core.internal.gc.gcdebug;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
-import core.stdc.string : memcpy, memset, memmove;
+import core.stdc.string : memcpy, memset, memmove, strcmp;
+import core.stdc.stdarg;
+import core.stdc.math: log10;
 import core.bitop;
 import core.thread;
 static import core.memory;
@@ -52,7 +55,7 @@ version (GNU) import gcc.builtins;
 version (LDC) import ldc.attributes;
 
 debug (PRINTF_TO_FILE) import core.stdc.stdio : sprintf, fprintf, fopen, fflush, FILE;
-else                   import core.stdc.stdio : sprintf, printf; // needed to output profiling results
+else                   import core.stdc.stdio : sprintf, snprintf, printf, vfprintf, stderr; // needed to output profiling results
 
 debug (VALGRIND) import etc.valgrind.valgrind;
 
@@ -473,7 +476,9 @@ class ConservativeGC : GC
      * Throws:
      *  OutOfMemoryError on allocation failure
      */
-    void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null) nothrow
+    void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
+                 DebugInfo di = DebugInfo.init)
+    nothrow
     {
         if (!size)
         {
@@ -482,7 +487,7 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, di);
 
         invalidate(p[0 .. localAllocSize], 0xF0, true);
 
@@ -498,7 +503,8 @@ class ConservativeGC : GC
     //
     // Implementation for malloc and calloc.
     //
-    private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null) nothrow
+    private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
+                               DebugInfo di = DebugInfo.init) nothrow
     {
         assert(size != 0);
 
@@ -508,7 +514,7 @@ class ConservativeGC : GC
         assert(gcx);
         //debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
 
-        auto p = gcx.alloc(size + SENTINEL_EXTRA, alloc_size, bits, ti);
+        auto p = gcx.alloc(size + SENTINEL_EXTRA, alloc_size, bits, ti, di.filename, di.line);
         if (!p)
             onOutOfMemoryError();
 
@@ -521,11 +527,18 @@ class ConservativeGC : GC
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
 
+        if(config.verbose >= 2)
+        {
+          gcx.allocatedObj[p] = di;
+          di.printAllocation(p);
+        }
+
         debug(PRINTF) printf("  => p = %p\n", p);
         return p;
     }
 
-    BlkInfo qalloc( size_t size, uint bits, const scope TypeInfo ti) nothrow
+    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti,
+                   DebugInfo di = DebugInfo.init) nothrow
     {
 
         if (!size)
@@ -535,7 +548,7 @@ class ConservativeGC : GC
 
         BlkInfo retval;
 
-        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti);
+        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti, di);
 
         if (!(bits & BlkAttr.NO_SCAN))
         {
@@ -562,7 +575,8 @@ class ConservativeGC : GC
      * Throws:
      *  OutOfMemoryError on allocation failure.
      */
-    void *calloc(size_t size, uint bits = 0, const TypeInfo ti = null) nothrow
+    void *calloc(size_t size, uint bits = 0, const TypeInfo ti = null,
+                   DebugInfo di = DebugInfo.init) nothrow
     {
         if (!size)
         {
@@ -570,8 +584,7 @@ class ConservativeGC : GC
         }
 
         size_t localAllocSize = void;
-
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, di);
 
         debug (VALGRIND) makeMemUndefined(p[0..size]);
         invalidate((p + size)[0 .. localAllocSize - size], 0xF0, true);
@@ -636,7 +649,7 @@ class ConservativeGC : GC
             return null;
         }
         if (!p)
-            return mallocNoSync(size, bits, alloc_size, ti);
+            return mallocNoSync(size, bits, alloc_size, ti, DebugInfo.init);
 
         debug(PRINTF) printf("GC::realloc(p = %p, size = %llu)\n", p, cast(ulong)size);
 
@@ -664,7 +677,7 @@ class ConservativeGC : GC
             if (!bits)
                 bits = pool.getBits(biti);
 
-            void* p2 = mallocNoSync(size, bits, alloc_size, ti);
+            void* p2 = mallocNoSync(size, bits, alloc_size, ti, DebugInfo.init);
             debug (SENTINEL)
                 psize = sentinel_size(q, psize);
             if (psize < size)
@@ -753,6 +766,19 @@ class ConservativeGC : GC
             pool.clrBits(biti, ~BlkAttr.NONE);
             pool.setBits(biti, bits);
         }
+
+        if(config.verbose >= 2)
+        {
+          // TODO
+          auto file = "ReallocNoSync";
+          auto line = __LINE__;
+
+          auto d = DebugInfo.realloc(file, line, size, ti);
+          gcx.allocatedObj[p] = d;
+
+          d.printAllocation(p);
+        }
+
         return p;
     }
 
@@ -1477,6 +1503,11 @@ private void set(ref PageBits bits, size_t i) @nogc pure nothrow
 
 struct Gcx
 {
+    import core.internal.container.hashtab: HashTab;
+    alias NoGCHashTab(K, V) = HashTab!(K, V);
+
+    NoGCHashTab!(void*, DebugInfo) allocatedObj;
+
     auto rootsLock = shared(AlignedSpinLock)(SpinLock.Contention.brief);
     auto rangesLock = shared(AlignedSpinLock)(SpinLock.Contention.brief);
     Treap!Root roots;
@@ -1894,13 +1925,15 @@ struct Gcx
         return isLowOnMem(cast(size_t)mappedPages * PAGESIZE);
     }
 
-    void* alloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti) nothrow
+    void* alloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti,
+                in string file, int line) nothrow
     {
-        return size <= PAGESIZE/2 ? smallAlloc(size, alloc_size, bits, ti)
+        return size <= PAGESIZE/2 ? smallAlloc(size, alloc_size, bits, ti, file, line)
                                   : bigAlloc(size, alloc_size, bits, ti);
     }
 
-    void* smallAlloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti) nothrow
+    void* smallAlloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti,
+                     in string file, int line) nothrow
     {
         immutable bin = binTable[size];
         alloc_size = binsize[bin];
@@ -1932,7 +1965,7 @@ struct Gcx
                 if (!newPool(1, false))
                 {
                     // out of memory => try to free some memory
-                    fullcollect(false, true); // stop the world
+                    fullcollect(false, true, false, file, line); // stop the world
                     if (lowMem)
                         minimize();
                     recoverNextPage(bin);
@@ -1940,7 +1973,7 @@ struct Gcx
             }
             else if (usedSmallPages > 0)
             {
-                fullcollect();
+                fullcollect(false, false, false, file, line);
                 if (lowMem)
                     minimize();
                 recoverNextPage(bin);
@@ -2264,7 +2297,15 @@ struct Gcx
         alias toscan = scanStack!precise;
 
         debug(MARK_PRINTF)
+<<<<<<< HEAD
             printf("marking range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
+            printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
+=======
+            printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
+        verbose_printf(3, "\tmarking first range: [%p..%p] (%#llx)\n", 
+                          rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+>>>>>>> 0e3ae5391e (add verbose option that display some GC information)
 
         // limit the amount of ranges added to the toscan stack
         enum FANOUT_LIMIT = 32;
@@ -2289,6 +2330,7 @@ struct Gcx
             debug (VALGRIND) makeMemDefined((&p)[0 .. 1]);
 
             debug(MARK_PRINTF) printf("\tmark %p: %p\n", rng.pbot, p);
+            verbose_printf(4, "\tmark %p: %p\n", rng.pbot, p);
 
             if (cast(size_t)(p - minAddr) < memSize &&
                 (cast(size_t)p & ~cast(size_t)(PAGESIZE-1)) != pcache)
@@ -2312,6 +2354,8 @@ struct Gcx
                 {
                     size_t low = 0;
                     size_t high = highpool;
+
+                    // does p belongs to one of the pools ? (ie pool.baseAddr <= p < pool.topAddr)
                     while (true)
                     {
                         size_t mid = (low + high) >> 1;
@@ -2337,6 +2381,12 @@ struct Gcx
                 // Adjust bit to be at start of allocated memory block
                 if (bin < Bins.B_PAGE)
                 {
+                    if(config.verbose >= 3)
+                    {
+                      auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
+                      debugInfo.printMarking(p, pool.baseAddr, pool.topAddr, bin);
+                    }
+
                     // We don't care abou setting pointsToBase correctly
                     // because it's ignored for small object pools anyhow.
                     auto offsetBase = baseOffset(offset, cast(Bins)bin);
@@ -2459,6 +2509,7 @@ struct Gcx
                     rng = toscan.pop();
                 }
             }
+            verbose_printf(3, "\t\tnext range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
             // printf("  pop [%p..%p] (%#zx)\n", p1, p2, cast(size_t)p2 - cast(size_t)p1);
             goto LcontRange;
 
@@ -2486,6 +2537,7 @@ struct Gcx
         LendOfRange:
             // continue with last found range
             rng = tgt;
+            verbose_printf(3, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         LcontRange:
             pcache = 0;
@@ -2541,9 +2593,26 @@ struct Gcx
     // collection step 2: mark roots and heap
     void markAll(alias markFn)() nothrow
     {
+<<<<<<< HEAD
         debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
         // Scan stacks registers, and TLS for each paused thread
         thread_scanAll(&markFn);
+||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
+        if (!nostack)
+        {
+            debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
+            // Scan stacks and registers for each paused thread
+            thread_scanAll(&markFn);
+        }
+=======
+        verbose_printf(3, "\t============= MARKING ==============\n");
+        if (!nostack)
+        {
+            debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
+            // Scan stacks and registers for each paused thread
+            thread_scanAll(&markFn);
+        }
+>>>>>>> 0e3ae5391e (add verbose option that display some GC information)
 
         // Scan roots[]
         debug(COLLECT_PRINTF) printf("\tscan roots[]\n");
@@ -2590,6 +2659,7 @@ struct Gcx
     size_t sweep() nothrow
     {
         // Free up everything not marked
+        verbose_printf(1, "\t============= SWEEPING ==============\n");
         debug(COLLECT_PRINTF) printf("\tfree'ing\n");
         size_t freedLargePages;
         size_t freedSmallPages;
@@ -2618,6 +2688,7 @@ struct Gcx
                     if (!pool.mark.test(biti))
                     {
                         void *p = pool.baseAddr + pn * PAGESIZE;
+                        verbose_printf(2, "[pool large object] p=%p\n", p);
                         void* q = sentinel_add(p);
                         sentinel_Invariant(q);
 
@@ -2725,6 +2796,9 @@ struct Gcx
                             static foreach (w; 0 .. PageBits.length)
                                 doLoop = doLoop || (toFree[w] & finalsdata[w]) != 0;
                         }
+                        else
+                          doLoop = true; // enable looping
+
 
                         if (doLoop)
                         {
@@ -2750,6 +2824,13 @@ struct Gcx
 
                                     assert(core.bitop.bt(toFree.ptr, i));
 
+                                    if(config.verbose >= 2)
+                                    {
+                                      auto debugInfo = allocatedObj[p];
+                                      debugInfo.printFreeing(p);
+                                      allocatedObj.remove(p);
+                                    }
+
                                     debug(COLLECT_PRINTF) printf("\tcollecting %p\n", p);
                                     leakDetector.log_free(q, sentinel_size(q, size));
 
@@ -2758,8 +2839,10 @@ struct Gcx
                             }
                         }
 
+                        // free all allocated object in page
                         if (recoverPage)
                         {
+                            /* verbose_printf(1, "free whole page\n"); */
                             pool.freeAllPageBits(pn);
 
                             pool.pagetable[pn] = Bins.B_FREE;
@@ -2779,6 +2862,10 @@ struct Gcx
                         }
                     }
                 }
+
+                if(config.verbose >= 2)
+                  foreach(_, ref debugInfo; allocatedObj)
+                    debugInfo.incrementAge();
             }
         }
 
@@ -2993,7 +3080,14 @@ struct Gcx
      * Return number of full pages free'd.
      * The collection is done concurrently only if block and isFinal are false.
      */
+<<<<<<< HEAD
     size_t fullcollect(bool block = false, bool isFinal = false) nothrow
+||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
+    size_t fullcollect(bool nostack = false, bool block = false, bool isFinal = false) nothrow
+=======
+    size_t fullcollect(bool nostack = false, bool block = false, bool isFinal = false, 
+                       in string file = "", int line = 0) nothrow
+>>>>>>> 0e3ae5391e (add verbose option that display some GC information)
     {
         // It is possible that `fullcollect` will be called from a thread which
         // is not yet registered in runtime (because allocating `new Thread` is
@@ -3006,7 +3100,8 @@ struct Gcx
         MonoTime start, stop, begin;
         begin = start = currTime;
 
-        debug(COLLECT_PRINTF) printf("Gcx.fullcollect()\n");
+       verbose_printf(1, "\n============ COLLECTION (from %.*s:%d)  =============\n",
+                      file.length, file.ptr, line);
         version (COLLECT_PARALLEL)
         {
             bool doParallel = config.parallel > 0 && !config.fork;
@@ -3160,6 +3255,9 @@ Lmark:
         ++numCollections;
 
         updateCollectThresholds();
+
+        verbose_printf(1, "=====================================================\n\n");
+
         if (doFork && isFinal)
             return fullcollect(true, false);
         return freedPages;
@@ -4552,7 +4650,6 @@ void printGCBits(GCBits* bits)
 }
 
 // we can assume the name is always from a literal, so it is zero terminated
-debug(PRINTF)
 string debugTypeName(const(TypeInfo) ti) nothrow
 {
     string name;

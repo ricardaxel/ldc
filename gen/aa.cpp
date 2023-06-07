@@ -62,8 +62,16 @@ DLValue *DtoAAIndex(const Loc &loc, Type *type, DValue *aa, DValue *key,
     auto t = mutableOf(unSharedOf(aa->type));
     LLValue *aati = DtoTypeInfoOf(loc, t);
     LLValue *valsize = DtoConstSize_t(getTypeAllocSize(DtoType(type)));
-    ret = gIR->CreateCallOrInvoke(func, aaval, aati, valsize, pkey,
-                                  "aa.index");
+
+    llvm::SmallVector<llvm::Value *, 6> args;
+    args.push_back(aaval);
+    args.push_back(aati);
+    args.push_back(valsize);
+    args.push_back(pkey);
+    args.push_back(DtoConstString(loc.filename));
+    args.push_back(DtoConstUint(loc.linnum));
+
+    ret = gIR->CreateCallOrInvoke(func, args, "aa.index");
   } else {
     LLValue *keyti = to_keyti(loc, aa);
     ret = gIR->CreateCallOrInvoke(func, aaval, keyti, pkey, "aa.index");

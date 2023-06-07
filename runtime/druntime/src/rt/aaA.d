@@ -13,6 +13,7 @@ extern (C) immutable int _aaVersion = 1;
 
 import core.memory : GC;
 import core.internal.util.math : min, max;
+import core.internal.gc.gcdebug;
 
 // grow threshold
 private enum GROW_NUM = 4;
@@ -64,11 +65,12 @@ else
 private struct Impl
 {
 private:
-    this(scope const TypeInfo_AssociativeArray ti, size_t sz = INIT_NUM_BUCKETS) nothrow
+    this(scope const TypeInfo_AssociativeArray ti, size_t sz = INIT_NUM_BUCKETS,
+         string file = "", uint line = 0) nothrow
     {
         keysz = cast(uint) ti.key.tsize;
         valsz = cast(uint) ti.value.tsize;
-        buckets = allocBuckets(sz);
+        buckets = allocBuckets(sz, file, line);
         firstUsed = cast(uint) buckets.length;
         valoff = cast(uint) talign(keysz, ti.value.talign);
         hashFn = &ti.key.getHash;
@@ -80,7 +82,7 @@ private:
         if ((ti.key.flags | ti.value.flags) & 1)
             flags |= Flags.hasPointers;
 
-        entryTI = fakeEntryTI(this, ti.key, ti.value);
+        entryTI = fakeEntryTI(this, ti.key, ti.value, file, line);
     }
 
     Bucket[] buckets;
@@ -144,26 +146,26 @@ private:
         }
     }
 
-    void grow(scope const TypeInfo keyti) pure nothrow
+    void grow(scope const TypeInfo keyti, string file, uint line) pure nothrow
     {
         // If there are so many deleted entries, that growing would push us
         // below the shrink threshold, we just purge deleted entries instead.
         if (length * SHRINK_DEN < GROW_FAC * dim * SHRINK_NUM)
-            resize(dim);
+            resize(dim, file, line);
         else
-            resize(GROW_FAC * dim);
+            resize(GROW_FAC * dim, file, line);
     }
 
-    void shrink(scope const TypeInfo keyti) pure nothrow
+    void shrink(scope const TypeInfo keyti, string file, uint line) pure nothrow
     {
         if (dim > INIT_NUM_BUCKETS)
-            resize(dim / GROW_FAC);
+            resize(dim / GROW_FAC, file, line);
     }
 
-    void resize(size_t ndim) pure nothrow
+    void resize(size_t ndim, string file, uint line) pure nothrow
     {
         auto obuckets = buckets;
-        buckets = allocBuckets(ndim);
+        buckets = allocBuckets(ndim, file, line);
 
         foreach (ref b; obuckets[firstUsed .. $])
             if (b.filled)
@@ -211,18 +213,19 @@ private pure nothrow @nogc:
     }
 }
 
-Bucket[] allocBuckets(size_t dim) @trusted pure nothrow
+Bucket[] allocBuckets(size_t dim, string file, uint line) @trusted pure nothrow
 {
     enum attr = GC.BlkAttr.NO_INTERIOR;
     immutable sz = dim * Bucket.sizeof;
-    return (cast(Bucket*) GC.calloc(sz, attr))[0 .. dim];
+    return (cast(Bucket*) GC.calloc(sz, attr, null, DebugInfo.alloc(file, line, sz, "AA Bucket")))[0 .. dim];
 }
 
 //==============================================================================
 // Entry
 //------------------------------------------------------------------------------
 
-private void* allocEntry(scope const Impl* aa, scope const void* pkey)
+private void* allocEntry(scope const Impl* aa, scope const void* pkey,
+                         string file, uint line)
 {
     import rt.lifetime : _d_newitemU;
     import core.stdc.string : memcpy, memset;
@@ -230,11 +233,11 @@ private void* allocEntry(scope const Impl* aa, scope const void* pkey)
     immutable akeysz = aa.valoff;
     void* res = void;
     if (aa.entryTI)
-        res = _d_newitemU(aa.entryTI);
+        res = _d_newitemU(aa.entryTI, file, line);
     else
     {
         auto flags = (aa.flags & Impl.Flags.hasPointers) ? 0 : GC.BlkAttr.NO_SCAN;
-        res = GC.malloc(akeysz + aa.valsz, flags);
+        res = GC.malloc(akeysz + aa.valsz, flags, null, DebugInfo.alloc(file, line, akeysz + aa.valsz, "AA entry"));
     }
 
     memcpy(res, pkey, aa.keysz); // copy key
@@ -273,7 +276,8 @@ private immutable(void)* getRTInfo(const TypeInfo ti) pure nothrow
 }
 
 // build type info for Entry with additional key and value fields
-TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo valti) nothrow
+TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo valti,
+                            string file, uint line) nothrow
 {
     import rt.lifetime : unqualify;
 
@@ -303,7 +307,8 @@ TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo va
 
     // save kti and vti after type info for struct
     enum sizeti = __traits(classInstanceSize, TypeInfo_Struct);
-    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof);
+    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void), 
+                        DebugInfo.alloc(file, line, sizeti + (2 + rtisize) * (void*).sizeof, typeid(void)));
     import core.stdc.string : memcpy;
 
     memcpy(p, __traits(initSymbol, TypeInfo_Struct).ptr, sizeti);
@@ -506,6 +511,20 @@ pure nothrow @nogc unittest
 // API Implementation
 //------------------------------------------------------------------------------
 
+// implementation of 
+// return new Impl(ti, INIT_NUM_BUCKETS, file, line);
+Impl* newImpl(const TypeInfo_AssociativeArray ti, ulong numBuckets, string file, uint line)
+{
+  import rt.lifetime:  _d_newitemT;
+  import core.lifetime:  moveEmplace;
+  Impl* newAA = cast(Impl*) _d_newitemT (typeid(Impl), file, line);
+
+  auto i = Impl(ti, numBuckets, file, line);
+  moveEmplace!Impl(i, *newAA);
+  
+  return newAA;
+}
+
 /** Allocate associative array data.
  * Called for `new SomeAA` expression.
  * Params:
@@ -513,9 +532,9 @@ pure nothrow @nogc unittest
  * Returns:
  *      A new associative array.
  */
-extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti)
+extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
 {
-    return new Impl(ti);
+  return newImpl(ti, INIT_NUM_BUCKETS, file, line);
 }
 
 /// Determine number of entries in associative array.
@@ -538,10 +557,10 @@ extern (C) size_t _aaLen(scope const AA aa) pure nothrow @nogc
  *      is set to all zeros
  */
 extern (C) void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti,
-    const size_t valsz, scope const void* pkey)
+    const size_t valsz, scope const void* pkey, string file, uint line)
 {
     bool found;
-    return _aaGetX(paa, ti, valsz, pkey, found);
+    return _aaGetX(paa, ti, valsz, pkey, found, file, line);
 }
 
 /******************************
@@ -559,13 +578,14 @@ extern (C) void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti,
  *      is set to all zeros
  */
 extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
-    const size_t valsz, scope const void* pkey, out bool found)
+    const size_t valsz, scope const void* pkey, out bool found,
+    string file = "", uint line = 0)
 {
     // lazily alloc implementation
     AA aa = *paa;
     if (aa is null)
     {
-        aa = new Impl(ti);
+        aa = newImpl(ti, INIT_NUM_BUCKETS, file, line);
         *paa = aa;
     }
 
@@ -585,7 +605,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     // check load factor and possibly grow
     else if (++aa.used * GROW_DEN > aa.dim * GROW_NUM)
     {
-        aa.grow(ti.key);
+        aa.grow(ti.key, file, line);
         p = aa.findSlotInsert(hash);
         assert(p.empty);
     }
@@ -593,7 +613,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     // update search cache and allocate entry
     aa.firstUsed = min(aa.firstUsed, cast(uint)(p - aa.buckets.ptr));
     p.hash = hash;
-    p.entry = allocEntry(aa, pkey);
+    p.entry = allocEntry(aa, pkey, file, line);
     // postblit for key
     if (aa.flags & Impl.Flags.keyHasPostblit)
     {
@@ -660,7 +680,8 @@ extern (C) bool _aaDelX(AA aa, scope const TypeInfo keyti, scope const void* pke
         // `shrink` reallocates, and allocating from a finalizer leads to
         // InvalidMemoryError: https://issues.dlang.org/show_bug.cgi?id=21442
         if (aa.length * SHRINK_DEN < aa.dim * SHRINK_NUM && !GC.inFinalizer())
-            aa.shrink(keyti);
+            // TODO
+            aa.shrink(keyti, __FILE__, __LINE__);
 
         return true;
     }
@@ -681,7 +702,7 @@ extern (C) void* _aaRehash(AA* paa, scope const TypeInfo keyti) pure nothrow
 {
     AA aa = *paa;
     if (!aa.empty)
-        aa.resize(nextpow2(INIT_DEN * aa.length / INIT_NUM));
+        aa.resize(nextpow2(INIT_DEN * aa.length / INIT_NUM), __FILE__, __LINE__);
     return aa;
 }
 
@@ -694,7 +715,7 @@ extern (C) inout(void[]) _aaValues(inout AA aa, const size_t keysz, const size_t
 
     import rt.lifetime : _d_newarrayU;
 
-    auto res = _d_newarrayU(tiValueArray, aa.length).ptr;
+    auto res = _d_newarrayU(tiValueArray, aa.length, "__aaValues TODO", 123).ptr;
     auto pval = res;
 
     immutable off = aa.valoff;
@@ -717,7 +738,7 @@ extern (C) inout(void[]) _aaKeys(inout AA aa, const size_t keysz, const TypeInfo
 
     import rt.lifetime : _d_newarrayU;
 
-    auto res = _d_newarrayU(tiKeyArray, aa.length).ptr;
+    auto res = _d_newarrayU(tiKeyArray, aa.length, "__aaKeys TODO", 123).ptr;
     auto pkey = res;
 
     foreach (b; aa.buckets[aa.firstUsed .. $])
@@ -779,7 +800,7 @@ extern (C) int _aaApply2(AA aa, const size_t keysz, dg2_t dg)
  *      A new associative array opaque pointer, or null if `keys` is empty.
  */
 extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys,
-    void[] vals)
+    void[] vals, string file = __FILE__, uint line = __LINE__)
 {
     assert(keys.length == vals.length);
 
@@ -790,7 +811,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
     if (!length)
         return null;
 
-    auto aa = new Impl(ti, nextpow2(INIT_DEN * length / INIT_NUM));
+    auto aa = newImpl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
 
     void* pkey = keys.ptr;
     void* pval = vals.ptr;
@@ -805,7 +826,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
         {
             p = aa.findSlotInsert(hash);
             p.hash = hash;
-            p.entry = allocEntry(aa, pkey); // move key, no postblit
+            p.entry = allocEntry(aa, pkey, file, line); // move key, no postblit
             aa.firstUsed = min(aa.firstUsed, cast(uint)(p - aa.buckets.ptr));
             actualLength++;
         }

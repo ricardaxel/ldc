@@ -1607,7 +1607,9 @@ public:
     else if (auto taa = ntype->isTypeAArray()) {
       LLFunction *func = getRuntimeFunction(e->loc, gIR->module, "_aaNew");
       LLValue *aaTypeInfo = DtoTypeInfoOf(e->loc, stripModifiers(taa));
-      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, "aa");
+      LLConstant* filename = DtoConstString(e->loc.filename);
+      llvm::ConstantInt* linNum = DtoConstUint(e->loc.linnum) ;
+      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, filename, linNum, "aa");
       result = new DImValue(e->type, aa);
     }
     // new basic type
@@ -2534,8 +2536,15 @@ public:
                                          initval, ".aaValuesStorage");
       LLValue *valuesArray = DtoConstSlice(DtoConstSize_t(e->keys->length), globalstore);
 
-      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, keysArray,
-                                            valuesArray, "aa");
+
+      llvm::SmallVector<llvm::Value *, 5> args;
+      args.push_back(aaTypeInfo);
+      args.push_back(keysArray);
+      args.push_back(valuesArray);
+      /* args.push_back(DtoConstString(e->loc.filename)); */
+      /* args.push_back(DtoConstUint(e->loc.linnum)); */
+
+      LLValue *aa = gIR->CreateCallOrInvoke(func, args, "aa");
       if (basetype->ty != TY::Taarray) {
         LLValue *tmp = DtoAlloca(e->type, "aaliteral");
         DtoStore(aa, DtoGEP(DtoType(e->type), tmp, 0u, 0));

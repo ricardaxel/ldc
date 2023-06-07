@@ -1,117 +1,265 @@
-LDC – the LLVM-based D Compiler
-===============================
+INSTRUMENTED LDC
+================
 
-[![Latest release](https://img.shields.io/github/v/release/ldc-developers/ldc?include_prereleases&label=latest)][8]
-[![Latest stable release](https://img.shields.io/github/v/release/ldc-developers/ldc?label=stable)][0]
-[![Build status](https://img.shields.io/circleci/project/github/ldc-developers/ldc/master?logo=CircleCI&label=CircleCI)][3]
-[![Build status](https://img.shields.io/cirrus/github/ldc-developers/ldc/master?label=Cirrus%20CI&logo=Cirrus%20CI)][4]
-[![Build status](https://img.shields.io/github/actions/workflow/status/ldc-developers/ldc/main.yml?branch=master&label=GitHub%20Actions%20%28main%29&logo=github)][7]
-[![Build status](https://img.shields.io/github/actions/workflow/status/ldc-developers/ldc/supported_llvm_versions.yml?branch=master&label=GitHub%20Actions%20%28LLVM%29&logo=github)][7]
+This project is forked from the official [LDC compiler](https://github.com/ldc-developers/ldc)
+and adds an overhead that give information about Garbage Collection.
 
-The LDC project provides a portable D programming language compiler
-with modern optimization and code generation capabilities.
+This branch is currently based on version : *v1.32.0*, with a patch to compile with
+llvm-16 (see `git diff v1.32.0..v1.32.0-llvm16`)
 
-The compiler uses the official DMD frontend to support the latest
-version of D2, and relies on the LLVM Core libraries for code
-generation.
+Usage
+-----
 
-LDC is fully Open Source; the parts of the source code not taken/adapted from
-other projects are BSD-licensed (see the LICENSE file for details).
-
-Please consult the D wiki for further information:
-https://wiki.dlang.org/LDC
-
-D1 is no longer available; see the `d1` Git branch for the last
-version supporting it.
+- Build ldc compiler, druntime and phobos (see [Building from Sources](https://wiki.dlang.org/Building_LDC_from_source))
+- compile your D program
+- when executing binary, add the runtime argument "--DRT-gcopt=verbose:1".
+Note : for now, this only works for non-forked single threaded GC, so you might
+need to add theses runtime options as well : "--DRT-gcopt=fork:0 parallel:0"
 
 
-Installation
-------------
-
-### From a pre-built package
-
-Portable stand-alone binary builds (and a Windows installer) for common
-platforms (incl. Linux, macOS, Windows, FreeBSD and Android) are available
-at the [GitHub release page](https://github.com/ldc-developers/ldc/releases).
-For Windows, the [Visual D installer](https://rainers.github.io/visuald/visuald/StartPage.html)
-also comes with a bundled LDC.
-
-For bleeding-edge users, we also provide the [latest successful Continuous
-Integration builds](https://github.com/ldc-developers/ldc/releases/tag/CI)
-with enabled LLVM & LDC assertions (increasing compile times by roughly 50%).
-
-The [dlang.org install script](https://dlang.org/install.html) can also be
-used to install these official packages from GitHub:
-
-    curl -fsS https://dlang.org/install.sh | bash -s ldc
-
-In addition, LDC is available from various package managers (but note that
-these packages are **community-maintained, might be outdated and not offer
-the full feature set of official packages from GitHub**):
-
-|              | Command                                      |
-| ------------ | -------------------------------------------- |
-| Alpine Linux | `apk add ldc`                              |
-| Android      | in [Termux app](https://play.google.com/store/apps/details?id=com.termux&hl=en): `pkg install ldc` |
-| Arch Linux   | `pacman -S ldc`                              |
-| Chocolatey   | `choco install ldc`                          |
-| Debian       | `apt install ldc`                            |
-| Docker       | `docker pull dlang2/ldc-ubuntu`              |
-| Fedora       | `dnf install ldc`                            |
-| FreeBSD      | `pkg install ldc`                            |
-| Gentoo       | `layman -a ldc`                              |
-| Homebrew     | `brew install ldc`                           |
-| Nix/NixOS    | `nix-env -i ldc`                             |
-| OpenBSD      | `pkg_add ldc`                                |
-| Snap         | `snap install --classic --channel=edge ldc2` |
-| Ubuntu       | `apt install ldc`                            |
-| Void         | `xbps-install -S ldc`                        |
-
-### Building from source
-
-In-depth material on building and installing LDC and the standard
-libraries is available on the project wiki for
-[Linux, macOS, BSD, and Android](http://wiki.dlang.org/Building_LDC_from_source) and
-[Windows](http://wiki.dlang.org/Building_and_hacking_LDC_on_Windows_using_MSVC).
-
-If you have a working C++/D build environment, CMake, and a recent LLVM
-version (≥ 11) available, there should be no big surprises. Do not
-forget to make sure the Phobos submodule is up to date:
-
-    $ cd ldc
-    $ git submodule update --init
-
-(DMD, GDC and LDC are supported as host compilers. For bootstrapping
-purposes, we recommend GDC via its `gdmd` wrapper.)
-
-Cross-compilation
------------------
-
-Similar to other LLVM-based compilers, cross-compiling with LDC is simple.
-Full instructions and example invocations are provided on the dedicated
-[Wiki page](https://wiki.dlang.org/Cross-compiling_with_LDC).
-
-#### Targeting Android
-
-You can find full instructions on cross-compiling or natively compiling
-for Android [on the wiki](https://wiki.dlang.org/Build_D_for_Android).
-
-Contact
+Example
 -------
 
-The best way to get in touch with the developers is either via the
-[digitalmars.D.ldc forum/newsgroup/mailing list](https://forum.dlang.org)
-or our [Gitter chat](http://gitter.im/ldc-developers/main).
-There is also the #ldc IRC channel on FreeNode.
+```
+>> cat test2.d
+import core.memory;
 
-For further documentation, contributor information, etc. please see
-[the D wiki](https://wiki.dlang.org/LDC).
+class Bar { int bar; }
 
-Feedback of any kind is very much appreciated!
+class Foo {
+
+  this()
+  {
+    this.bar = new Bar;
+  }
+
+  Bar bar;
+}
 
 
-[0]: https://github.com/ldc-developers/ldc/releases/latest
-[3]: https://circleci.com/gh/ldc-developers/ldc/tree/master
-[4]: https://cirrus-ci.com/github/ldc-developers/ldc/master
-[7]: https://github.com/ldc-developers/ldc/actions?query=branch%3Amaster
-[8]: https://github.com/ldc-developers/ldc/releases
+void func()
+{
+  Foo f2 = new Foo;
+  Foo f3 = new Foo;
+}
+
+int main()
+{
+  Foo f = new Foo;
+
+  func();
+  GC.collect();
+
+  return 0;
+}
+
+# compile without optimization
+>> ldc2 -g -O0 test2.d --disable-gc2stack --disable-d-passes --of test2
+
+>> ./test2 "--DRT-gcopt=cleanup:collect fork:0 parallel:0 verbose:1"
+[test2.d:24] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381000
+[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b381020
+[test2.d:18] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381040
+[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b381060
+[test2.d:19] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381080
+[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b3810a0
+
+============ COLLECTION (from :0)  =============
+	============= SWEEPING ==============
+=====================================================
+
+
+============ COLLECTION (from :0)  =============
+	============= SWEEPING ==============
+	Freeing test2.Foo (test2.d:24; 24 bytes) (0x7fac0b381000). AGE :  1/2
+	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b381020). AGE :  1/2
+	Freeing test2.Foo (test2.d:18; 24 bytes) (0x7fac0b381040). AGE :  1/2
+	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b381060). AGE :  1/2
+	Freeing test2.Foo (test2.d:19; 24 bytes) (0x7fac0b381080). AGE :  1/2
+	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b3810a0). AGE :  1/2
+=====================================================
+
+```
+
+Example (delegates)
+-------------------
+
+```
+╰─> cat test3.d
+import std.stdio;
+import core.memory;
+
+alias DG = void delegate();
+
+DG captureDgData()
+{
+  int a = 3;
+
+  // dg references local a ==> needs memory allocation
+  auto dg = () { a++; };
+
+  return dg;
+}
+
+void nestedCapture()
+{
+  DG c1 = captureDgData();
+}
+
+// clear stack
+void clobber() { int[2048] x; }
+
+void main()
+{
+  nestedCapture();
+  DG c2= captureDgData();
+  GC.collect();
+}
+
+
+╰─> ldc2 -g -O0 test3.d --disable-gc2stack --disable-d-passes --of test3
+
+╰─> ./test3 "--DRT-gcopt=cleanup:collect fork:0 parallel:0 verbose:2"
+[test3.d:6] captured '[a]' (4 bytes) => p = 0x7f02638fe000
+[test3.d:6] captured '[a]' (4 bytes) => p = 0x7f02638fe010
+
+============ COLLECTION (from :0)  =============
+        ============= SWEEPING ==============
+        Freeing [a] (test3.d:6; 4 bytes (0x7f02638fe000). AGE :  0/1
+=====================================================
+
+
+============ COLLECTION (from :0)  =============
+        ============= SWEEPING ==============
+        Freeing [a] (test3.d:6; 4 bytes (0x7f02638fe010). AGE :  1/2
+=====================================================
+
+
+```
+
+Allocations handling status
+---------------------------
+
+### Using `new` :
+
+- [x] new Class (_d_allocclass)
+```
+class C { ... }
+C c = new C(); // _d_allocclass
+```
+
+<details>
+<summary><b>Note</b></summary>
+dmd use `_d_allocclass` to allocate class. One can find such function in ldc runtime, but it is never directly called from generated IR
+
+![image](https://github.com/ricardaxel/ldc/assets/46921637/d021494b-7d24-4320-ac74-da3bdc1ef1a6)
+</details>
+
+- [ ] `new`  uninitialized non-array item (_d_newitemU / _d_newitemT / _d_newitemiT)
+```
+struct Sz {int x = 0;}
+struct Si {int x = 3;}
+
+new Sz(); // _d_newitemT(typeid(Sz))
+new Si(); // _d_newitemiT(typeid(Si))
+```
+- [ ] `new` basic type (_d_allocmemoryT)
+
+```
+auto a = new int; // _d_allocmemoryT
+```
+
+- [x] `new` associative array (_aaNew) : See Associative Array section for more details
+```
+int[float] aa = new int[float]; // __aaNew
+```
+
+### Array :
+
+- [x] new array (_d_newarrayU / _d_newarrayT / _d_newarrayiT)
+```
+int[] arr = new int[3]; // `_d_newarrayT` : initializes to 0
+float[] arr2 = new float[3]; // `_d_newarrayiT` : initializes based on initializer retrieved from TypeInfo
+int[] arr3 = [1, 2, 3]; // `_d_newarrayU` :  leave elements uninitialized (compiler set them just after allocation=
+double[] arr = uninitializedArray!(double[])(100); // call `_d_newarrayU` under the hood
+```
+- [x] array length set (_d_arraysetlengthT / _d_arraysetlengthiT)  (partially handled, would need better log info)
+```
+int[] arr;
+arr.length = 2; // _d_arraysetlengthT
+```
+- [x] array append (_d_arrayappendT / _d_arrayappendcTX / _d_arrayappendcd / _d_arrayappendwd)  (partially handled, would need better log info)
+```
+int[] a = [1, 2, 3];
+a ~= 1; // _d_arrayappendcTX
+a ~= [1, 2]; // _d_arrayappendT
+```
+
+- [x] 2 arrays concatenation (_d_arraycatT)
+```
+int[] x = [10, 20, 30];
+int[] y = [40, 50];
+int[] c = x ~ y; // _d_arraycatT(typeid(int[]), (cast(byte*) x)[0..x.length], (cast(byte*) y)[0..y.length]);
+```
+
+  - [x] N (> 2) arrays concatenation (_d_arraycatnTX)
+```
+int[] a, b, c;
+int[] res = a ~ b ~ c; // _d_arraycatnTX(typeid(int[]), [(cast(byte*)a.ptr)[0..a.length], (cast(byte*)b.ptr)[0..b.length], (cast(byte*)c.ptr)[0..c.length]]);
+```
+
+- [ ] Slice copy (_d_array_slice_copy)
+```
+int[] b = new int[3];
+b[0 .. $] = [1, 2, 3]; // _d_array_slice_copy
+```
+
+### Delegates
+
+- [x] Allocation of local variable captured by a delegate
+```
+void f()
+{
+	int a = 3;
+	int b = 2;
+
+	// trigger a GC allocation to store a and b
+	// allocation made with _d_allocmemory, at the entry of the function f()
+  	auto dg = () => a + b;
+}
+```
+
+### Associative Arrays
+
+- [x] AA initialization : Assocative Arrays is a pointer to a struct called 'Impl' (in reports this struct is mangled to S2rt3aaA4Impl),
+so initializiation will trigger some allocation.
+
+AAs also holds an array of buckets, which get sometimes resized or shrinked.
+For example, when an AA is created, 8 buckets are allocated.
+
+```
+double[int] aa;
+aa[0] = 0; // __aGetY => (lazy) initialization
+	   // => allocation of Impl.sizeof bytes (56 bytes in v1.32.0)
+	   //  + allocation of 8 * Bucket.sizeof bytes (128 bytes)
+	   //  + allocation of entry (see next point)
+
+string[float] aa2 = new string[float]; // __aaNew => allocation of 56 + 128 bytes
+
+ ```
+
+- [x] new entry added (__aaGetY)
+```
+double[int] aa;
+aa[0] = 0; // new entry ==> allocation of (Key.sizeof + Value.sizeof) bytes
+aa[0] = 1; // already allocated ==> nothing to do
+ ```
+
+- [ ] AA initialization with litteral (_d_assocarrayliteralTX)
+```
+double[int] aa = [1: 2, 3: 4, 5: 6]; // _d_assocarrayliteralTX
+```
+
+- [ ] entry deletion (__aaDelX) : if new version of aa is 'short' enough, it will be shrinked, which implies a reallocation
+- [ ] rehash (object.d:rehash --> __aaRehash)
+

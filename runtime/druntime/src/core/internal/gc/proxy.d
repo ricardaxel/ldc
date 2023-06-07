@@ -11,6 +11,9 @@ import core.internal.gc.impl.proto.gc;
 import core.gc.config;
 import core.gc.gcinterface;
 import core.gc.registry : createGCInstance;
+import core.stdc.stdio;
+
+import core.internal.gc.gcdebug : DebugInfo;
 
 static import core.memory;
 
@@ -151,19 +154,22 @@ extern (C)
         return instance.clrAttr(p, a);
     }
 
-    void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow
+    void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+                      DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.malloc(sz, ba, ti);
+        return instance.malloc(sz, ba, ti, di);
     }
 
-    BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow
+    BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+                      DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.qalloc( sz, ba, ti );
+        return instance.qalloc( sz, ba, ti, di );
     }
 
-    void* gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow
+    void* gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+                     DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.calloc( sz, ba, ti );
+        return instance.calloc( sz, ba, ti, di );
     }
 
     void* gc_realloc( void* p, size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow

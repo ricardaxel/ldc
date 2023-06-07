@@ -89,8 +89,12 @@ LLValue *DtoNew(const Loc &loc, Type *newtype) {
   // get type info
   LLConstant *ti = DtoTypeInfoOf(loc, newtype);
   assert(isaPointer(ti));
+
+  auto file = DtoConstString(loc.filename);
+  auto line = DtoConstUint(loc.linnum);
+
   // call runtime allocator
-  return gIR->CreateCallOrInvoke(fn, ti, ".gc_mem");
+   return gIR->CreateCallOrInvoke(fn, ti, file, line, ".gc_mem");
 }
 
 void DtoDeleteMemory(const Loc &loc, DValue *ptr) {

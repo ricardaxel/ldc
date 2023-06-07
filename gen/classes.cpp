@@ -85,12 +85,24 @@ DValue *DtoNewClass(const Loc &loc, TypeClass *tc, NewExp *newexp) {
                        ".newclass_alloca");
   } else {
     const bool useEHAlloc = global.params.ehnogc && newexp->thrownew;
-    llvm::Function *fn = getRuntimeFunction(
-        loc, gIR->module, useEHAlloc ? "_d_newThrowable" : "_d_allocclass");
-    LLConstant *ci = irClass->getClassInfoSymbol();
-    mem = gIR->CreateCallOrInvoke(
-        fn, ci, useEHAlloc ? ".newthrowable" : ".newclass_gc");
-    doInit = !useEHAlloc;
+
+    if(useEHAlloc)
+    {
+      llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_newThrowable" );
+      LLConstant *ci = irClass->getClassInfoSymbol();
+      mem = gIR->CreateCallOrInvoke(fn, ci, ".newthrowable");
+      doInit = false;
+    }
+    else
+    {
+      llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_allocclass");
+      LLConstant *ci = irClass->getClassInfoSymbol();
+      LLConstant* filename = DtoConstString(loc.filename);
+      llvm::ConstantInt* linNum = DtoConstUint(loc.linnum) ;
+
+      mem = gIR->CreateCallOrInvoke(fn, ci, ".newclass_gc");
+      doInit = true;
+    }
   }
 
   // init

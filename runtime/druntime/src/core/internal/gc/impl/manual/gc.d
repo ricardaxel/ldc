@@ -24,6 +24,7 @@ import core.gc.gcinterface;
 import core.internal.container.array;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
+import core.internal.gc.gcdebug;
 static import core.memory;
 
 extern (C) noreturn onOutOfMemoryError(void* pretend_sideffect = null, string file = __FILE__, size_t line = __LINE__) @trusted pure nothrow @nogc; /* dmd @@@BUG11461@@@ */
@@ -98,7 +99,7 @@ class ManualGC : GC
         return 0;
     }
 
-    void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow
+    void* malloc(size_t size, uint bits, const TypeInfo ti, DebugInfo) nothrow
     {
         void* p = cstdlib.malloc(size);
 
@@ -107,16 +108,16 @@ class ManualGC : GC
         return p;
     }
 
-    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti) nothrow
+    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti, DebugInfo di) nothrow
     {
         BlkInfo retval;
-        retval.base = malloc(size, bits, ti);
+        retval.base = malloc(size, bits, ti, di);
         retval.size = size;
         retval.attr = bits;
         return retval;
     }
 
-    void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow
+    void* calloc(size_t size, uint bits, const TypeInfo ti, DebugInfo) nothrow
     {
         void* p = cstdlib.calloc(1, size);
 

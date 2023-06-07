@@ -1554,6 +1554,42 @@ version (IN_LLVM)
         return true;
     }
 
+    final VarDeclarations allocatedClosureVars()
+    {
+        VarDeclarations allocated;
+
+        for (size_t i = 0; i < closureVars.length; i++)
+        {
+            VarDeclaration v = closureVars[i];
+
+            for (size_t j = 0; j < v.nestedrefs.length; j++)
+            {
+                FuncDeclaration f = v.nestedrefs[j];
+                assert(f != this);
+
+                /* __require and __ensure will always get called directly,
+                 * so they never make outer functions closure.
+                 */
+                if (f.ident == Id.require || f.ident == Id.ensure)
+                    continue;
+
+                for (Dsymbol s = f; s && s != this; s = s.toParentP(this))
+                {
+                    FuncDeclaration fx = s.isFuncDeclaration();
+                    if (!fx)
+                        continue;
+                    if ((fx.isThis() || fx.tookAddressOf) && !allocated.contains(v))
+                        allocated.push(v);
+
+                    if (checkEscapingSiblings(fx, this) && !allocated.contains(v))
+                        allocated.push(v);
+                }
+            }
+        }
+
+        return allocated;
+    }
+
     /***********************************************
      * Check that the function contains any closure.
      * If it's @nogc, report suitable errors.

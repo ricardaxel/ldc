@@ -464,11 +464,15 @@ extern(C):
      * Throws:
      *  OutOfMemoryError on allocation failure.
      */
+
+    import core.internal.gc.gcdebug : DebugInfo;
+
     version (D_ProfileGC)
         pragma(mangle, "gc_mallocTrace") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
-        pragma(mangle, "gc_malloc") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null) pure nothrow;
+        pragma(mangle, "gc_malloc") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+            DebugInfo di = DebugInfo.init) pure nothrow;
 
     /**
      * Requests an aligned block of managed memory from the garbage collector.
@@ -494,7 +498,8 @@ extern(C):
         pragma(mangle, "gc_qallocTrace") static BlkInfo qalloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
-        pragma(mangle, "gc_qalloc") static BlkInfo qalloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null) pure nothrow;
+        pragma(mangle, "gc_qalloc") static BlkInfo qalloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+            DebugInfo di = DebugInfo.init) pure nothrow;
 
 
     /**
@@ -522,8 +527,8 @@ extern(C):
         pragma(mangle, "gc_callocTrace") static void* calloc(size_t sz, uint ba = 0, const TypeInfo ti = null,
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
-        pragma(mangle, "gc_calloc") static void* calloc(size_t sz, uint ba = 0, const TypeInfo ti = null) pure nothrow;
-
+        pragma(mangle, "gc_calloc") static void* calloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+            DebugInfo di = DebugInfo.init) pure nothrow;
 
     /**
      * Extend, shrink or allocate a new block of memory keeping the contents of
@@ -1512,7 +1517,7 @@ unittest
 }
 
 // in rt.lifetime:
-private extern (C) void* _d_newitemU(scope const TypeInfo _ti) @system pure nothrow;
+private extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) @system pure nothrow;
 
 /**
 Moves a value to a new GC allocation.
@@ -1529,7 +1534,7 @@ T* moveToGC(T)(auto ref T value)
     static T* doIt(ref T value) @trusted
     {
         import core.lifetime : moveEmplace;
-        auto mem = cast(T*) _d_newitemU(typeid(T)); // allocate but don't initialize
+        auto mem = cast(T*) _d_newitemU(typeid(T), __FILE__, __LINE__); // allocate but don't initialize
         moveEmplace(value, *mem);
         return mem;
     }

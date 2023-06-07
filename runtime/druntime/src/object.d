@@ -2935,7 +2935,7 @@ extern (C)
     }
 
     // size_t _aaLen(in AA aa) pure nothrow @nogc;
-    private void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey) pure nothrow;
+    private void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey, string file, uint line) pure nothrow;
     private void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey, out bool found) pure nothrow;
     // inout(void)* _aaGetRvalueX(inout AA aa, in TypeInfo keyti, in size_t valsz, in void* pkey);
     inout(void[]) _aaValues(inout AA aa, const size_t keysz, const size_t valsz, const TypeInfo tiValueArray) pure nothrow;
@@ -2965,12 +2965,12 @@ extern (C)
         Early compiler didn't check purity of toHash or postblit functions, if key is a UDT thus
         copiler allowed to create AA literal with keys, which have impure unsafe toHash methods.
     */
-    void* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys, void[] values) pure;
+    void* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys, void[] values, string file = __FILE__, uint line = __LINE__) pure;
 }
 
-void* aaLiteral(Key, Value)(Key[] keys, Value[] values) @trusted pure
+void* aaLiteral(Key, Value)(Key[] keys, Value[] values, string, uint) @trusted pure
 {
-    return _d_assocarrayliteralTX(typeid(Value[Key]), *cast(void[]*)&keys, *cast(void[]*)&values);
+    return _d_assocarrayliteralTX(typeid(Value[Key]), *cast(void[]*)&keys, *cast(void[]*)&values, __FILE__, __LINE__);
 }
 
 // Lower an Associative Array to a newaa struct for static initialization.
@@ -3084,7 +3084,7 @@ V[K] dup(T : V[K], K, V)(T aa)
     {
         import core.stdc.string : memcpy;
 
-        void* pv = _aaGetY(cast(AA*)&result, typeid(V[K]), V.sizeof, &k);
+        void* pv = _aaGetY(cast(AA*)&result, typeid(V[K]), V.sizeof, &k, "test", 123);
         memcpy(pv, &v, V.sizeof);
         return *cast(V*)pv;
     }
