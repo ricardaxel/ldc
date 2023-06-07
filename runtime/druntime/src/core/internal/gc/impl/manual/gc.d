@@ -102,7 +102,7 @@ class ManualGC : GC
         return 0;
     }
 
-    void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow
+    void* malloc(size_t size, uint bits, const TypeInfo ti, string, int, string) nothrow
     {
         void* p = cstdlib.malloc(size);
 
@@ -114,7 +114,7 @@ class ManualGC : GC
     BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti) nothrow
     {
         BlkInfo retval;
-        retval.base = malloc(size, bits, ti);
+        retval.base = malloc(size, bits, ti, "", 0, "");
         retval.size = size;
         retval.attr = bits;
         return retval;
