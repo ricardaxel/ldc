@@ -99,7 +99,7 @@ class ProtoGC : GC
         return 0;
     }
 
-    void* malloc(size_t size, uint bits, const scope TypeInfo ti) nothrow
+    void* malloc(size_t size, uint bits, const scope TypeInfo ti, string, int, string) nothrow
     {
         .gc_init_nothrow();
         return .gc_malloc(size, bits, ti);

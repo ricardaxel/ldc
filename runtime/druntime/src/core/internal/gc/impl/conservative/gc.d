@@ -43,6 +43,7 @@ import core.internal.gc.pooltable;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
 import core.stdc.string : memcpy, memset, memmove;
+import core.stdc.stdarg;
 import core.bitop;
 import core.thread;
 static import core.memory;
@@ -51,7 +52,7 @@ version (GNU) import gcc.builtins;
 version (LDC) import ldc.attributes;
 
 debug (PRINTF_TO_FILE) import core.stdc.stdio : sprintf, fprintf, fopen, fflush, FILE;
-else                   import core.stdc.stdio : sprintf, printf; // needed to output profiling results
+else                   import core.stdc.stdio : sprintf, printf, vprintf; // needed to output profiling results
 
 import core.time;
 alias currTime = MonoTime.currTime;
@@ -470,7 +471,9 @@ class ConservativeGC : GC
      * Throws:
      *  OutOfMemoryError on allocation failure
      */
-    void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null) nothrow
+    void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
+                 string file = __FILE__, int line = __LINE__, string func = __FUNCTION__)
+    nothrow
     {
         if (!size)
         {
@@ -479,6 +482,8 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
+        verbose_printf(1, "%.*s:%d (%.*s)\n", file.length, file.ptr, 
+                          line, func.length, func.ptr);
         auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti);
 
         if (!(bits & BlkAttr.NO_SCAN))
@@ -515,6 +520,9 @@ class ConservativeGC : GC
         }
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
+
+        verbose_printf(1, "GC::malloc(%s)", debugTypeName(ti).ptr);
+        verbose_printf(1, " => p = %p\n", p);
 
         debug(PRINTF) printf("  => p = %p\n", p);
         return p;
@@ -2277,6 +2285,8 @@ struct Gcx
 
         debug(MARK_PRINTF)
             printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
+        verbose_printf(1, "marking first range: [%p..%p] (%#llx)\n", 
+                          rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         // limit the amount of ranges added to the toscan stack
         enum FANOUT_LIMIT = 32;
@@ -2300,6 +2310,7 @@ struct Gcx
             auto p = *cast(void**)(rng.pbot);
 
             debug(MARK_PRINTF) printf("\tmark %p: %p\n", rng.pbot, p);
+            verbose_printf(2, "\tmark %p: %p\n", rng.pbot, p);
 
             if (cast(size_t)(p - minAddr) < memSize &&
                 (cast(size_t)p & ~cast(size_t)(PAGESIZE-1)) != pcache)
@@ -2323,6 +2334,8 @@ struct Gcx
                 {
                     size_t low = 0;
                     size_t high = highpool;
+
+                    // does p belongs to one of the pools ? (ie pool.baseAddr <= p < pool.topAddr)
                     while (true)
                     {
                         size_t mid = (low + high) >> 1;
@@ -2342,12 +2355,14 @@ struct Gcx
                 size_t pn = offset / PAGESIZE;
                 size_t bin = pool.pagetable[pn]; // not Bins to avoid multiple size extension instructions
 
+                verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
                 debug(MARK_PRINTF)
                     printf("\t\tfound pool %p, base=%p, pn = %lld, bin = %d\n", pool, pool.baseAddr, cast(long)pn, bin);
 
                 // Adjust bit to be at start of allocated memory block
                 if (bin < Bins.B_PAGE)
                 {
+                    verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
                     // We don't care abou setting pointsToBase correctly
                     // because it's ignored for small object pools anyhow.
                     auto offsetBase = baseOffset(offset, cast(Bins)bin);
@@ -2470,6 +2485,7 @@ struct Gcx
                     rng = toscan.pop();
                 }
             }
+            verbose_printf(1, "next range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
             // printf("  pop [%p..%p] (%#zx)\n", p1, p2, cast(size_t)p2 - cast(size_t)p1);
             goto LcontRange;
 
@@ -2497,6 +2513,7 @@ struct Gcx
         LendOfRange:
             // continue with last found range
             rng = tgt;
+            verbose_printf(1, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         LcontRange:
             pcache = 0;
@@ -2551,6 +2568,7 @@ struct Gcx
     // collection step 2: mark roots and heap
     void markAll(alias markFn)(bool nostack) nothrow
     {
+        verbose_printf(1, "\t[step 2] mark roots and heap\n");
         if (!nostack)
         {
             debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
@@ -3022,7 +3040,7 @@ struct Gcx
         MonoTime start, stop, begin;
         begin = start = currTime;
 
-        debug(COLLECT_PRINTF) printf("Gcx.fullcollect()\n");
+       verbose_printf(1, "Gcx.fullcollect()\n");
         version (COLLECT_PARALLEL)
         {
             bool doParallel = config.parallel > 0 && !config.fork;
@@ -4567,7 +4585,6 @@ void printGCBits(GCBits* bits)
 }
 
 // we can assume the name is always from a literal, so it is zero terminated
-debug(PRINTF)
 string debugTypeName(const(TypeInfo) ti) nothrow
 {
     string name;
@@ -5066,4 +5083,17 @@ unittest
         // adjacent allocations likely but not guaranteed
         printf("unexpected pointers %p and %p\n", p.ptr, q.ptr);
     }
+}
+
+/* ============================ VERBOSE PRINTF =============================== */
+
+extern(C) void verbose_printf(uint treshold, scope const char* format, scope const ...) @system nothrow @nogc
+{
+  if(config.verbose >= treshold)
+  {
+    va_list args;
+    va_start (args, format);
+    vprintf(format, args);
+    va_end(args);
+  }
 }
