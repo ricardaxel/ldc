@@ -167,7 +167,7 @@ extern (C) Object _d_newclass(const ClassInfo ci) @weak
 
 // Initialization is performed in DtoNewClass(), so only allocate
 // the class in druntime (LDC issue #966).
-extern (C) Object _d_allocclass(const ClassInfo ci) @weak
+extern (C) Object _d_allocclass(const ClassInfo ci, string filename, int line) @weak
 {
     return _d_newclass!false(ci);
 }

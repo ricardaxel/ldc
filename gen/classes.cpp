@@ -85,15 +85,28 @@ DValue *DtoNewClass(const Loc &loc, TypeClass *tc, NewExp *newexp) {
                        ".newclass_alloca");
   } else {
     const bool useEHAlloc = global.params.ehnogc && newexp->thrownew;
-    llvm::Function *fn = getRuntimeFunction(
-        loc, gIR->module, useEHAlloc ? "_d_newThrowable" : "_d_allocclass");
-    LLConstant *ci =
+
+    if(useEHAlloc)
+    {
+      llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_newThrowable" );
+      LLConstant *ci =
+          DtoBitCast(irClass->getClassInfoSymbol(), DtoType(getClassInfoType()));
+      mem = gIR->CreateCallOrInvoke(fn, ci, ".newthrowable_alloc");
+      mem = DtoBitCast(mem, DtoType(tc), ".newthrowable");
+      doInit = false;
+    }
+    else
+    {
+      llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_allocclass");
+      LLConstant *ci =
         DtoBitCast(irClass->getClassInfoSymbol(), DtoType(getClassInfoType()));
-    mem = gIR->CreateCallOrInvoke(
-        fn, ci, useEHAlloc ? ".newthrowable_alloc" : ".newclass_gc_alloc");
-    mem = DtoBitCast(mem, DtoType(tc),
-                     useEHAlloc ? ".newthrowable" : ".newclass_gc");
-    doInit = !useEHAlloc;
+      auto filename = DtoConstString(loc.filename);
+      auto linNum = DtoConstInt(loc.linnum) ;
+
+      mem = gIR->CreateCallOrInvoke(fn, ci, filename, linNum, ".newclass_gc_alloc");
+      mem = DtoBitCast(mem, DtoType(tc), ".newclass_gc");
+      doInit = true;
+    }
   }
 
   // init
