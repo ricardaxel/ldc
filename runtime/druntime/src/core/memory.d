@@ -463,7 +463,8 @@ extern(C):
         pragma(mangle, "gc_mallocTrace") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
-        pragma(mangle, "gc_malloc") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null) pure nothrow;
+        pragma(mangle, "gc_malloc") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+            string file = "", int line = 0) pure nothrow;
 
     /**
      * Requests an aligned block of managed memory from the garbage collector.

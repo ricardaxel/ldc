@@ -472,7 +472,7 @@ class ConservativeGC : GC
      *  OutOfMemoryError on allocation failure
      */
     void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
-                 string file = __FILE__, int line = __LINE__, string func = __FUNCTION__)
+                 in string file = "", int line = 0)
     nothrow
     {
         if (!size)
@@ -482,8 +482,7 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        verbose_printf(1, "%.*s:%d (%.*s)\n", file.length, file.ptr, 
-                          line, func.length, func.ptr);
+        verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
         auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti);
 
         if (!(bits & BlkAttr.NO_SCAN))
@@ -521,7 +520,7 @@ class ConservativeGC : GC
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
 
-        verbose_printf(1, "GC::malloc(%s)", debugTypeName(ti).ptr);
+        verbose_printf(1, "new '%s'", debugTypeName(ti).ptr);
         verbose_printf(1, " => p = %p\n", p);
 
         debug(PRINTF) printf("  => p = %p\n", p);
@@ -2792,8 +2791,10 @@ struct Gcx
                             }
                         }
 
+                        // free all allocated object in page
                         if (recoverPage)
                         {
+                            verbose_printf(1, "free whole page\n");
                             pool.freeAllPageBits(pn);
 
                             pool.pagetable[pn] = Bins.B_FREE;
@@ -2805,6 +2806,7 @@ struct Gcx
                         }
                         else
                         {
+                            verbose_printf(1, "free some part of page\n");
                             pool.freePageBits(pn, toFree);
 
                             // add to recover chain

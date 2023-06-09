@@ -98,7 +98,8 @@ Returns: newly created object
 */
 // adapted for LDC
 pragma(inline, true)
-private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci)
+private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci, 
+  in string filename = "", int line = 0)
 {
     import core.stdc.stdlib;
     import core.exception : onOutOfMemoryError;
@@ -126,7 +127,7 @@ private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci)
             attr |= BlkAttr.FINALIZE;
         if (ci.m_flags & TypeInfo_Class.ClassFlags.noPointers)
             attr |= BlkAttr.NO_SCAN;
-        p = GC.malloc(init.length, attr, ci);
+        p = GC.malloc(init.length, attr, ci, filename, line);
         debug(PRINTF) printf(" p = %p\n", p);
     }
 
@@ -169,7 +170,7 @@ extern (C) Object _d_newclass(const ClassInfo ci) @weak
 // the class in druntime (LDC issue #966).
 extern (C) Object _d_allocclass(const ClassInfo ci, string filename, int line) @weak
 {
-    return _d_newclass!false(ci);
+    return _d_newclass!false(ci, filename, line);
 }
 
 }

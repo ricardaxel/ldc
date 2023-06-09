@@ -159,9 +159,10 @@ extern (C)
         return instance.clrAttr(p, a);
     }
 
-    void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow
+    void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+                     in string file = "", int line = 0) nothrow
     {
-        return instance.malloc(sz, ba, ti);
+        return instance.malloc(sz, ba, ti, file, line);
     }
 
     BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow

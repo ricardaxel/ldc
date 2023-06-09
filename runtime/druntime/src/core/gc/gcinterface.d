@@ -82,8 +82,7 @@ interface GC
      *
      */
     void* malloc(size_t size, uint bits, const TypeInfo ti,
-                 string file = __FILE__, int line = __LINE__, 
-                 string func = __FUNCTION__) nothrow;
+                 string file, int line) nothrow;
 
     /*
      *
