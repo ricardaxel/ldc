@@ -2,7 +2,6 @@
 // not optimized at all !
 
 import core.stdc.stdlib : malloc, realloc, free;
-/* import core.stdc.string : memcpy, memset, memmove; */
 
 struct Vec(T)
 {
@@ -113,16 +112,172 @@ unittest
   assert(v.capacity == 16);
 }
 
-struct AssociativeArray(Key, Value)
+struct LinkedList(T)
 {
-  static opCall() @nogc
+  private struct Cell(T)
   {
-    AssociativeArray!(Key, Value) aa;
-    aa.m_Keys = Vec!Key();
-    aa.m_Values = Vec!Value();
-    return aa;
+    T data;
+    Cell* next;
   }
 
+  void pushAtFront(T elem) @nogc
+  {
+    Cell!T * newCell = cast(Cell!T *)malloc((Cell!T).sizeof);
+
+    newCell.data = elem;
+    newCell.next = m_FirstCell;
+    m_FirstCell = newCell;
+    
+    m_Length++;
+  }
+
+  void remove(size_t idx) @nogc
+  {
+    assert(idx < m_Length);
+
+    if(idx == 0)
+    {
+      Cell!T* toDelete = m_FirstCell;
+      m_FirstCell = m_FirstCell.next;
+      free(toDelete);
+    }
+    
+    else
+    {
+      Cell!T* precCell = m_FirstCell;
+      Cell!T* curCell = precCell.next;
+      size_t curIdx = 1;
+
+      while(curIdx++ != idx)
+      {
+        precCell = curCell;
+        curCell = curCell.next;
+      }
+
+      precCell.next = curCell.next;
+      free(curCell);
+    }
+
+    m_Length--;
+  }
+
+  const(T) opIndex(size_t idx) const @nogc
+  {
+    assert(idx < m_Length);
+
+    // double pointer to ensure this method is const
+    const(Cell!T *)* curCell = &m_FirstCell;
+    size_t curIdx = 0;
+
+    while(curIdx++ != idx)
+      curCell = &(*curCell).next;
+
+    return (*curCell).data;
+  }
+
+  void opIndexAssign(T value, size_t idx) @nogc
+  {
+    assert(idx < m_Length);
+    Cell!T * curCell = m_FirstCell;
+    size_t curIdx = 0;
+
+    while(curIdx++ != idx)
+      curCell = curCell.next;
+  
+    curCell.data = value;
+  }
+
+  // /!\ push at front
+  void opOpAssign(string op = "~")(T value) @nogc
+  {
+    this.pushAtFront(value);
+  }
+
+  bool contains(in T value) const @nogc
+  {
+    const(Cell!T *)* curCell = &m_FirstCell;
+    for(size_t i = 0; i < length; i++)
+    {
+      if((*curCell).data == value)
+        return true;
+      curCell = &(*curCell).next;
+    }
+
+    return false;
+  }
+
+  // don't call this.contains() to avoid a useless pass
+  size_t firstIndexOf(in T value) const @nogc
+  {
+    const(Cell!T *)* curCell = &m_FirstCell;
+    for(size_t i = 0; i < length; i++)
+    {
+      if((*curCell).data == value)
+        return i;
+      curCell = &(*curCell).next;
+    }
+
+    assert(0);
+  }
+
+  size_t length() const @nogc { return m_Length; }
+
+private:
+  Cell!T * m_FirstCell;
+  size_t m_Length;
+}
+
+unittest
+{
+  LinkedList!int ll;
+
+  foreach_reverse(i; 3 .. 10)
+    ll.pushAtFront(i);
+
+  assert(ll[0] == 3);
+  assert(ll.firstIndexOf(3) == 0);
+
+  assert(ll[5] == 8);
+  ll[5] = 7;
+  assert(ll[5] == 7);
+  ll[5] = 8;
+
+  assert(ll[6] == 9);
+  assert(ll.firstIndexOf(9) == 6);
+
+  assert(ll.contains(3));
+  assert(!ll.contains(2));
+
+  assert(ll.length == 7);
+
+  ll ~= 1;
+  assert(ll.firstIndexOf(1) == 0);
+  assert(ll.length == 8);
+
+  ll.pushAtFront(1);
+  assert(ll.firstIndexOf(1) == 0);
+  assert(ll.length == 9);
+
+  ll.remove(0);
+  ll.remove(0);
+  assert(ll.length == 7);
+  assert(ll[0] == 3);
+
+  assert(ll[3] == 6);
+  ll.remove(3);
+  assert(ll.length == 6);
+  assert(ll[2] == 5);
+  assert(ll[3] == 7);
+  assert(ll[4] == 8);
+
+  // remove last
+  ll.remove(5);
+  assert(ll[4] == 8);
+  assert(ll.length == 5);
+}
+
+struct AssociativeArray(Key, Value)
+{
   void insert(Key key, Value value) @nogc
   {
     if(m_Keys.contains(key))
@@ -141,8 +296,10 @@ struct AssociativeArray(Key, Value)
   {
     if(!m_Keys.contains(key))
       return;
-
-    //very costy !
+  
+    size_t idx = m_Keys.firstIndexOf(key);
+    m_Keys.remove(idx);
+    m_Values.remove(idx);
   }
 
   bool exists(in Key key) const @nogc
@@ -157,13 +314,13 @@ struct AssociativeArray(Key, Value)
   }
 
   private:
-    Vec!Key m_Keys;
-    Vec!Value m_Values;
+    LinkedList!Key m_Keys;
+    LinkedList!Value m_Values;
 }
 
 unittest
 {
-  AssociativeArray!(void*, int) aa = AssociativeArray!(void*, int)();
+  AssociativeArray!(void*, int) aa;
   
   auto p1 = malloc(1);
   auto p2 = malloc(1);
@@ -176,5 +333,9 @@ unittest
   assert(!aa.exists(p3));
 
   assert(aa[p1] == 1);
+  assert(aa[p2] == 2);
+
+  aa.remove(p1);
+  assert(!aa.exists(p1));
   assert(aa[p2] == 2);
 }
