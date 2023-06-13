@@ -1,5 +1,6 @@
 // basic vector implementation that doesn't use GC and phobos
 // not optimized at all !
+module core.internal.gc.impl.conservative.nogc_collection;
 
 import core.stdc.stdlib : malloc, realloc, free;
 
@@ -276,7 +277,7 @@ unittest
   assert(ll.length == 5);
 }
 
-struct AssociativeArray(Key, Value)
+struct NoGCAssociativeArray(Key, Value)
 {
   void insert(Key key, Value value) @nogc
   {
@@ -307,7 +308,7 @@ struct AssociativeArray(Key, Value)
     return m_Keys.contains(key);
   }
 
-  Value opIndex(in Key key) const @nogc
+  const(Value) opIndex(in Key key) const @nogc
   {
     assert(exists(key));
     return m_Values[m_Keys.firstIndexOf(key)];
@@ -320,7 +321,7 @@ struct AssociativeArray(Key, Value)
 
 unittest
 {
-  AssociativeArray!(void*, int) aa;
+  NoGCAssociativeArray!(void*, int) aa;
   
   auto p1 = malloc(1);
   auto p2 = malloc(1);
