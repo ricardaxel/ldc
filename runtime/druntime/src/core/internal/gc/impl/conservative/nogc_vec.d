@@ -34,7 +34,7 @@ struct Vec(T)
     m_Length++;
   }
 
-  const(T) opIndex(size_t idx) const @nogc
+  ref inout(T) opIndex(size_t idx) inout @nogc
   {
     assert(idx < m_Length);
     return m_Data[idx];
@@ -162,12 +162,12 @@ struct LinkedList(T)
     m_Length--;
   }
 
-  const(T) opIndex(size_t idx) const @nogc
+  ref inout(T) opIndex(size_t idx) inout @nogc
   {
     assert(idx < m_Length);
 
     // double pointer to ensure this method is const
-    const(Cell!T *)* curCell = &m_FirstCell;
+    inout(Cell!T *)* curCell = &m_FirstCell;
     size_t curIdx = 0;
 
     while(curIdx++ != idx)
@@ -192,6 +192,22 @@ struct LinkedList(T)
   void opOpAssign(string op = "~")(T value) @nogc
   {
     this.pushAtFront(value);
+  }
+
+  int opApply(int delegate(const(T)) nothrow @nogc op) const nothrow @nogc
+  {
+    int res = 0;
+
+    const(Cell!T *)* curCell = &m_FirstCell;
+    for(size_t i = 0; i < length; i++)
+    {
+      res = op((*curCell).data);
+      if(res)
+        break;
+      curCell = &(*curCell).next;
+    }
+
+    return res;
   }
 
   bool contains(in T value) const @nogc
@@ -275,6 +291,16 @@ unittest
   ll.remove(5);
   assert(ll[4] == 8);
   assert(ll.length == 5);
+
+  {
+    LinkedList!int ll2;
+    foreach_reverse(i; 0 .. 5)
+      ll2.pushAtFront(i);
+
+    int currIdx = 0;
+    foreach(elem; ll2)
+      assert(elem == currIdx++);
+  }
 }
 
 struct NoGCAssociativeArray(Key, Value)
@@ -314,6 +340,25 @@ struct NoGCAssociativeArray(Key, Value)
     return m_Values[m_Keys.firstIndexOf(key)];
   }
 
+  // can modify value, not key
+  int opApply(int delegate(Key, ref Value) nothrow @nogc op) nothrow @nogc
+  {
+    int res = 0;
+
+    for(size_t i = 0; i < m_Keys.length; i++)
+    {
+      Key key = m_Keys[i];
+      Value val = m_Values[i];
+      res = op(key, val);
+
+      m_Values[i] = val;
+      if(res)
+        break;
+    }
+
+    return res;
+  }
+
   private:
     LinkedList!Key m_Keys;
     LinkedList!Value m_Values;
@@ -336,7 +381,24 @@ unittest
   assert(aa[p1] == 1);
   assert(aa[p2] == 2);
 
-  aa.remove(p1);
-  assert(!aa.exists(p1));
-  assert(aa[p2] == 2);
+  aa.remove(p2);
+  assert(!aa.exists(p2));
+  assert(aa[p1] == 1);
+
+  aa.insert(p2, 2);
+  aa.insert(p3, 3);
+  
+  auto pointers = [p3, p2, p1];
+  int idx = 0;
+  foreach(k, v; aa)
+  {
+    assert(k == pointers[idx]);
+    assert(v == 3 - idx);
+    idx++;
+  }
+
+  foreach(_, ref v; aa)
+    v += 3;
+
+  assert(aa[p1] == 4);
 }
