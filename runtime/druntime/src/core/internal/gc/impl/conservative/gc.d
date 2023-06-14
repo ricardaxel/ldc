@@ -159,6 +159,8 @@ private struct DebugInfo
   uint line;
   string type;
 
+  uint age; // gains one year per collection
+
   void setupDescription() nothrow @nogc
   {
     if(!stringDescr)
@@ -570,7 +572,6 @@ class ConservativeGC : GC
 
         d.setupDescription();
         gcx.allocatedObj.insert(p, d);
-
 
         verbose_printf(1, "new '%s'", debugTypeName(ti).ptr);
         verbose_printf(1, " => p = %p\n", p);
@@ -2845,8 +2846,10 @@ struct Gcx
                                     assert(core.bitop.bt(toFree.ptr, i));
 
                                     auto debugInfo = allocatedObj[p];
-                                    verbose_printf(1, "\tFreeing %s (%p)\n", 
-                                                   debugInfo.toStringz, p);
+                                    verbose_printf(1, "\tFreeing %s (%p). AGE :  %u/%u \n", 
+                                                   debugInfo.toStringz, p, debugInfo.age,
+                                                   numCollections + 1);
+                                    allocatedObj.remove(p);
 
                                     debug(COLLECT_PRINTF) printf("\tcollecting %p\n", p);
                                     leakDetector.log_free(q, sentinel_size(q, size));
@@ -2855,6 +2858,9 @@ struct Gcx
                                 }
                             }
                         }
+
+                        foreach(_, ref debugInfo; allocatedObj)
+                          debugInfo.age++;
 
                         // free all allocated object in page
                         if (recoverPage)
