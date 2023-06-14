@@ -11,6 +11,7 @@ import core.internal.gc.impl.proto.gc;
 import core.gc.config;
 import core.gc.gcinterface;
 import core.gc.registry : createGCInstance;
+import core.stdc.stdio;
 
 static import core.memory;
 
