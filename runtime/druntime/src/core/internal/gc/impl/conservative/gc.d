@@ -3270,6 +3270,9 @@ Lmark:
         ++numCollections;
 
         updateCollectThresholds();
+
+        verbose_printf(1, "=====================================================\n\n");
+
         if (doFork && isFinal)
             return fullcollect(true, true, false);
         return freedPages;
