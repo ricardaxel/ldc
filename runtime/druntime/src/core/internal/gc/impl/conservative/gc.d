@@ -564,9 +564,12 @@ class ConservativeGC : GC
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
 
-        auto d = DebugInfo(file, line, debugTypeName(ti));
-        d.setupDescription();
-        gcx.allocatedObj.insert(p, d);
+        if(config.verbose)
+        {
+          auto d = DebugInfo(file, line, debugTypeName(ti));
+          d.setupDescription();
+          gcx.allocatedObj.insert(p, d);
+        }
 
         verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
         verbose_printf(1, "new '%s'", debugTypeName(ti).ptr);
@@ -805,9 +808,12 @@ class ConservativeGC : GC
             pool.setBits(biti, bits);
         }
 
-        auto d = DebugInfo("ReallocNoSync", __LINE__, debugTypeName(ti));
-        d.setupDescription();
-        gcx.allocatedObj.insert(p, d);
+        if(config.verbose)
+        {
+          auto d = DebugInfo("ReallocNoSync", __LINE__, debugTypeName(ti));
+          d.setupDescription();
+          gcx.allocatedObj.insert(p, d);
+        }
         return p;
     }
 
@@ -2420,10 +2426,13 @@ struct Gcx
                 // Adjust bit to be at start of allocated memory block
                 if (bin < Bins.B_PAGE)
                 {
-                    auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
-                    verbose_printf(1, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
-                    verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
-                    verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
+                    if(config.verbose)
+                    {
+                      auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
+                      verbose_printf(1, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
+                      verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
+                      verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
+                    }
 
                     // We don't care abou setting pointsToBase correctly
                     // because it's ignored for small object pools anyhow.
@@ -2848,11 +2857,14 @@ struct Gcx
 
                                     assert(core.bitop.bt(toFree.ptr, i));
 
-                                    auto debugInfo = allocatedObj[p];
-                                    verbose_printf(1, "\tFreeing %s (%p). AGE :  %u/%u \n", 
-                                                   debugInfo.toStringz, p, debugInfo.age,
-                                                   numCollections + 1);
-                                    allocatedObj.remove(p);
+                                    if(config.verbose)
+                                    {
+                                      auto debugInfo = allocatedObj[p];
+                                      verbose_printf(1, "\tFreeing %s (%p). AGE :  %u/%u \n", 
+                                          debugInfo.toStringz, p, debugInfo.age,
+                                          numCollections + 1);
+                                      allocatedObj.remove(p);
+                                    }
 
                                     debug(COLLECT_PRINTF) printf("\tcollecting %p\n", p);
                                     leakDetector.log_free(q, sentinel_size(q, size));
@@ -2862,8 +2874,9 @@ struct Gcx
                             }
                         }
 
-                        foreach(_, ref debugInfo; allocatedObj)
-                          debugInfo.age++;
+                        if(config.verbose)
+                          foreach(_, ref debugInfo; allocatedObj)
+                            debugInfo.age++;
 
                         // free all allocated object in page
                         if (recoverPage)
