@@ -100,8 +100,8 @@ DValue *DtoNewClass(const Loc &loc, TypeClass *tc, NewExp *newexp) {
       llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_allocclass");
       LLConstant *ci =
         DtoBitCast(irClass->getClassInfoSymbol(), DtoType(getClassInfoType()));
-      auto filename = DtoConstString(loc.filename);
-      auto linNum = DtoConstInt(loc.linnum) ;
+      LLConstant* filename = DtoConstString(loc.filename);
+      llvm::ConstantInt* linNum = DtoConstUint(loc.linnum) ;
 
       mem = gIR->CreateCallOrInvoke(fn, ci, filename, linNum, ".newclass_gc_alloc");
       mem = DtoBitCast(mem, DtoType(tc), ".newclass_gc");

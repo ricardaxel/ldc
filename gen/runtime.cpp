@@ -624,7 +624,7 @@ static void buildRuntimeModule() {
 
   // Object _d_allocclass(const ClassInfo ci)
   createFwdDecl(LINK::c, objectTy, {"_d_allocclass"},
-                {classInfoTy, stringTy, intTy}, {STCconst});
+                {classInfoTy, stringTy, uintTy}, {STCconst});
 
   // Throwable _d_newThrowable(const ClassInfo ci)
   createFwdDecl(LINK::c, throwableTy, {"_d_newThrowable"}, {classInfoTy},
