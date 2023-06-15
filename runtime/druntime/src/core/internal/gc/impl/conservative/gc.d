@@ -526,7 +526,6 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
         auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line);
 
         if (!(bits & BlkAttr.NO_SCAN))
@@ -565,14 +564,11 @@ class ConservativeGC : GC
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
 
-        string s = "array";
-        auto d = strcmp(debugTypeName(ti).ptr, "TypeInfo_i") ? 
-          DebugInfo(file, line, debugTypeName(ti)) :
-          DebugInfo(s, line, debugTypeName(ti));
-
+        auto d = DebugInfo(file, line, debugTypeName(ti));
         d.setupDescription();
         gcx.allocatedObj.insert(p, d);
 
+        verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
         verbose_printf(1, "new '%s'", debugTypeName(ti).ptr);
         verbose_printf(1, " => p = %p\n", p);
 
@@ -580,7 +576,8 @@ class ConservativeGC : GC
         return p;
     }
 
-    BlkInfo qalloc( size_t size, uint bits, const scope TypeInfo ti) nothrow
+    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti,
+                   in string file = "", int line = 0) nothrow
     {
 
         if (!size)
@@ -590,7 +587,7 @@ class ConservativeGC : GC
 
         BlkInfo retval;
 
-        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti);
+        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti, file, line);
 
         if (!(bits & BlkAttr.NO_SCAN))
         {
@@ -626,7 +623,9 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti);
+        string file = "TODO -- calloc";
+        auto line = 123; 
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line);
 
         memset(p, 0, size);
         if (!(bits & BlkAttr.NO_SCAN))
@@ -805,6 +804,10 @@ class ConservativeGC : GC
             pool.clrBits(biti, ~BlkAttr.NONE);
             pool.setBits(biti, bits);
         }
+
+        auto d = DebugInfo("ReallocNoSync", __LINE__, debugTypeName(ti));
+        d.setupDescription();
+        gcx.allocatedObj.insert(p, d);
         return p;
     }
 
@@ -2411,17 +2414,17 @@ struct Gcx
                 size_t pn = offset / PAGESIZE;
                 size_t bin = pool.pagetable[pn]; // not Bins to avoid multiple size extension instructions
 
-                auto debugInfo = allocatedObj[p];
-                verbose_printf(1, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
-                verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
-
                 debug(MARK_PRINTF)
                     printf("\t\tfound pool %p, base=%p, pn = %lld, bin = %d\n", pool, pool.baseAddr, cast(long)pn, bin);
 
                 // Adjust bit to be at start of allocated memory block
                 if (bin < Bins.B_PAGE)
                 {
+                    auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
+                    verbose_printf(1, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
+                    verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
                     verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
+
                     // We don't care abou setting pointsToBase correctly
                     // because it's ignored for small object pools anyhow.
                     auto offsetBase = baseOffset(offset, cast(Bins)bin);

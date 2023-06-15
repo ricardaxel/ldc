@@ -161,14 +161,15 @@ extern (C)
     }
 
     void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                     in string file = "", int line = 0) nothrow
+                     in string file = __FILE__, int line = __LINE__) nothrow
     {
         return instance.malloc(sz, ba, ti, file, line);
     }
 
-    BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow
+    BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
+                       in string file = __FILE__, int line = __LINE__) nothrow
     {
-        return instance.qalloc( sz, ba, ti );
+        return instance.qalloc( sz, ba, ti, file, line );
     }
 
     void* gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow

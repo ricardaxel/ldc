@@ -482,7 +482,7 @@ private BlkInfo __arrayAlloc(size_t arrsize, const scope TypeInfo ti, const Type
     if (typeInfoSize)
         attr |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto bi = GC.qalloc(padded_size, attr, tinext);
+    auto bi = GC.qalloc(padded_size, attr, tinext, "__arrayAlloc v0", 123);
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
@@ -502,7 +502,7 @@ private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeI
         return BlkInfo();
     }
 
-    auto bi = GC.qalloc(padded_size, info.attr, tinext);
+    auto bi = GC.qalloc(padded_size, info.attr, tinext, "__arrayAlloc v1", 321);
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
@@ -1224,7 +1224,7 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti) pure nothrow @weak
     if (tiSize)
         flags |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto blkInf = GC.qalloc(size, flags, ti);
+    auto blkInf = GC.qalloc(size, flags, ti, "_d_newitemU", 123);
     auto p = blkInf.base;
 
     if (tiSize)
