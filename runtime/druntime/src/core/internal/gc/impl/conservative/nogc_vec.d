@@ -79,7 +79,7 @@ private:
   size_t m_Capacity;
 }
 
-unittest
+@nogc nothrow unittest
 {
   Vec!int v = Vec!int();
 
@@ -244,7 +244,7 @@ private:
   size_t m_Length;
 }
 
-unittest
+@nogc nothrow unittest
 {
   LinkedList!int ll;
 
@@ -364,7 +364,7 @@ struct NoGCAssociativeArray(Key, Value)
     LinkedList!Value m_Values;
 }
 
-unittest
+@nogc nothrow unittest
 {
   NoGCAssociativeArray!(void*, int) aa;
   
@@ -388,7 +388,12 @@ unittest
   aa.insert(p2, 2);
   aa.insert(p3, 3);
   
-  auto pointers = [p3, p2, p1];
+  auto pointers = cast(void**)malloc(3 * (void*).sizeof);
+  scope(exit) free(pointers);
+  pointers[0] = p3;
+  pointers[1] = p2;
+  pointers[2] = p1;
+
   int idx = 0;
   foreach(k, v; aa)
   {
