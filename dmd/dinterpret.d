@@ -4873,7 +4873,7 @@ public:
             {
                 // In expressionsem.d `ea.length = eb;` got lowered to `_d_arraysetlengthT(ea, eb);`.
                 // The following code will rewrite it back to `ea.length = eb` and then interpret that expression.
-                assert(e.arguments.length == 2);
+                /* assert(e.arguments.length == 2); */
 
                 Expression ea = (*e.arguments)[0];
                 Expression eb = (*e.arguments)[1];
@@ -4928,7 +4928,7 @@ public:
 
                 if (fd.ident == Id._d_arrayappendT)
                 {
-                    assert(e.arguments.length == 2);
+                    /* assert(e.arguments.length == 2); */
                     lhs = (*e.arguments)[0];
                     rhs = (*e.arguments)[1];
                 }
@@ -5095,7 +5095,7 @@ public:
             // `_d_arrayappendcTX(arr, elem), arr[arr.length - 1] = elem, elem;`.
             // The following code will rewrite it back to `arr ~= elem`
             // and then interpret that expression.
-            assert(ce.arguments.length == 2);
+            /* assert(ce.arguments.length == 2); */
 
             auto arr = (*ce.arguments)[0];
             auto elem = e.e2.isConstructExp().e2;

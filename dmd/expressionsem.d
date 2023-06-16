@@ -9635,6 +9635,8 @@ version (IN_LLVM)
             }
             arguments.push(ale.e1);
             arguments.push(exp.e2);
+            arguments.push(new StringExp(exp.loc, exp.loc.filename.toDString()));
+            arguments.push(new IntegerExp(exp.loc, exp.loc.linnum, Type.tint32));
 
             Expression ce = new CallExp(ale.loc, id, arguments);
             auto res = ce.expressionSemantic(sc);
@@ -10399,6 +10401,8 @@ version (IN_LLVM)
 
                 arguments.push(exp.e1);
                 arguments.push(exp.e2);
+                arguments.push(new StringExp(exp.loc, exp.loc.filename.toDString()));
+                arguments.push(new IntegerExp(exp.loc, exp.loc.linnum, Type.tint32));
                 Expression ce = new CallExp(exp.loc, id, arguments);
                 *output = ce.expressionSemantic(sc);
             }
@@ -10446,6 +10450,8 @@ version (IN_LLVM)
 
                 arguments.push(value1);
                 arguments.push(new IntegerExp(exp.loc, 1, Type.tsize_t));
+                arguments.push(new StringExp(exp.loc, exp.loc.filename.toDString()));
+                arguments.push(new IntegerExp(exp.loc, exp.loc.linnum, Type.tint32));
 
                 Expression ce = new CallExp(exp.loc, id, arguments);
 

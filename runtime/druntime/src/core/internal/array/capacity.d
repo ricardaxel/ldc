@@ -10,8 +10,8 @@
 module core.internal.array.capacity;
 
 // HACK: `nothrow` and `pure` is faked.
-private extern (C) void[] _d_arraysetlengthT(const TypeInfo ti, size_t newlength, void[]* p) nothrow pure;
-private extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p) nothrow pure;
+private extern (C) void[] _d_arraysetlengthT(const TypeInfo ti, size_t newlength, void[]* p, string file, uint line) nothrow pure;
+private extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p, string file, uint line) nothrow pure;
 
 /*
  * This template is needed because there need to be a `_d_arraysetlengthTTrace!Tarr` instance for every
@@ -34,7 +34,7 @@ template _d_arraysetlengthTImpl(Tarr : T[], T)
      * Bugs:
      *   The safety level of this function is faked. It shows itself as `@trusted pure nothrow` to not break existing code.
      */
-    size_t _d_arraysetlengthT(return scope ref Tarr arr, size_t newlength) @trusted pure nothrow
+    size_t _d_arraysetlengthT(return scope ref Tarr arr, size_t newlength, string file, uint line) @trusted pure nothrow
     {
         pragma(inline, false);
         version (D_TypeInfo)
@@ -42,9 +42,9 @@ template _d_arraysetlengthTImpl(Tarr : T[], T)
             auto ti = typeid(Tarr);
 
             static if (__traits(isZeroInit, T))
-                ._d_arraysetlengthT(ti, newlength, cast(void[]*)&arr);
+                ._d_arraysetlengthT(ti, newlength, cast(void[]*)&arr, file, line);
             else
-                ._d_arraysetlengthiT(ti, newlength, cast(void[]*)&arr);
+                ._d_arraysetlengthiT(ti, newlength, cast(void[]*)&arr, file, line);
 
             return arr.length;
         }

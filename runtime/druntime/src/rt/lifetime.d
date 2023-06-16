@@ -465,7 +465,8 @@ private void __arrayClearPad(ref BlkInfo info, size_t arrsize, size_t padsize) n
   allocate an array memory block by applying the proper padding and
   assigning block attributes if not inherited from the existing block
   */
-private BlkInfo __arrayAlloc(size_t arrsize, const scope TypeInfo ti, const TypeInfo tinext) nothrow pure
+private BlkInfo __arrayAlloc(size_t arrsize, const scope TypeInfo ti, const TypeInfo tinext,
+                             string file, uint line) nothrow pure
 {
     import core.checkedint;
 
@@ -482,17 +483,18 @@ private BlkInfo __arrayAlloc(size_t arrsize, const scope TypeInfo ti, const Type
     if (typeInfoSize)
         attr |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto bi = GC.qalloc(padded_size, attr, tinext, "__arrayAlloc v0", 123);
+    auto bi = GC.qalloc(padded_size, attr, tinext, file, line);
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
 
-private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeInfo ti, const TypeInfo tinext)
+private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeInfo ti, const TypeInfo tinext,
+                             string file, uint line)
 {
     import core.checkedint;
 
     if (!info.base)
-        return __arrayAlloc(arrsize, ti, tinext);
+        return __arrayAlloc(arrsize, ti, tinext, file, line);
 
     immutable padsize = __arrayPad(arrsize, tinext);
     bool overflow;
@@ -502,7 +504,7 @@ private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeI
         return BlkInfo();
     }
 
-    auto bi = GC.qalloc(padded_size, info.attr, tinext, "__arrayAlloc v1", 321);
+    auto bi = GC.qalloc(padded_size, info.attr, tinext, file, line);
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
@@ -935,7 +937,7 @@ Lcontinue:
     auto datasize = (*p).length * size;
     // copy attributes from original block, or from the typeinfo if the
     // original block doesn't exist.
-    info = __arrayAlloc(reqsize, info, ti, tinext);
+    info = __arrayAlloc(reqsize, info, ti, tinext, "_d_arraysetcapacity TODO", 123);
     if (info.base is null)
         goto Loverflow;
     // copy the data over.
@@ -992,7 +994,8 @@ Params:
     length = `.length` of resulting array
 Returns: newly allocated array
 */
-extern (C) void[] _d_newarrayU(const scope TypeInfo ti, size_t length) pure nothrow @weak
+extern (C) void[] _d_newarrayU(const scope TypeInfo ti, size_t length, 
+                               string file, uint line) pure nothrow @weak
 {
     import core.exception : onOutOfMemoryError;
 
@@ -1037,7 +1040,7 @@ Loverflow:
     assert(0);
 Lcontinue:
 
-    auto info = __arrayAlloc(size, ti, tinext);
+    auto info = __arrayAlloc(size, ti, tinext, file, line);
     if (!info.base)
         goto Loverflow;
     debug(PRINTF) printf(" p = %p\n", info.base);
@@ -1049,11 +1052,11 @@ Lcontinue:
 }
 
 /// ditto
-extern (C) void[] _d_newarrayT(const TypeInfo ti, size_t length) pure nothrow @weak
+extern (C) void[] _d_newarrayT(const TypeInfo ti, size_t length, string file, uint line) pure nothrow @weak
 {
     import core.stdc.string;
 
-    void[] result = _d_newarrayU(ti, length);
+    void[] result = _d_newarrayU(ti, length, file, line);
     auto tinext = unqualify(ti.next);
     auto size = tinext.tsize;
 
@@ -1062,11 +1065,11 @@ extern (C) void[] _d_newarrayT(const TypeInfo ti, size_t length) pure nothrow @w
 }
 
 /// ditto
-extern (C) void[] _d_newarrayiT(const TypeInfo ti, size_t length) pure nothrow @weak
+extern (C) void[] _d_newarrayiT(const TypeInfo ti, size_t length, string file, uint line) pure nothrow @weak
 {
     import core.internal.traits : AliasSeq;
 
-    void[] result = _d_newarrayU(ti, length);
+    void[] result = _d_newarrayU(ti, length, file, line);
     auto tinext = unqualify(ti.next);
     auto size = tinext.tsize;
 
@@ -1100,7 +1103,7 @@ extern (C) void[] _d_newarrayiT(const TypeInfo ti, size_t length) pure nothrow @
 /*
  * Helper for creating multi-dimensional arrays
  */
-private void[] _d_newarrayOpT(alias op)(const TypeInfo ti, size_t[] dims)
+private void[] _d_newarrayOpT(alias op)(const TypeInfo ti, size_t[] dims, string file, uint line)
 {
     debug(PRINTF) printf("_d_newarrayOpT(ndims = %d)\n", dims.length);
     if (dims.length == 0)
@@ -1114,12 +1117,12 @@ private void[] _d_newarrayOpT(alias op)(const TypeInfo ti, size_t[] dims)
         debug(PRINTF) printf("foo(ti = %p, ti.next = %p, dim = %d, ndims = %d\n", ti, ti.next, dim, dims.length);
         if (dims.length == 1)
         {
-            auto r = op(ti, dim);
+            auto r = op(ti, dim, file, line);
             return *cast(void[]*)(&r);
         }
 
         auto allocsize = (void[]).sizeof * dim;
-        auto info = __arrayAlloc(allocsize, ti, tinext);
+        auto info = __arrayAlloc(allocsize, ti, tinext, file, line);
         auto isshared = typeid(ti) is typeid(TypeInfo_Shared);
         __setArrayAllocLength(info, allocsize, isshared, tinext);
         auto p = __arrayStart(info)[0 .. dim];
@@ -1163,7 +1166,7 @@ Params:
 Returns:
     newly allocated array
 */
-extern (C) void[] _d_newarraymTX(const TypeInfo ti, size_t[] dims) @weak
+extern (C) void[] _d_newarraymTX(const TypeInfo ti, size_t[] dims, string file, uint line) @weak
 {
     debug(PRINTF) printf("_d_newarraymT(dims.length = %d)\n", dims.length);
 
@@ -1171,12 +1174,12 @@ extern (C) void[] _d_newarraymTX(const TypeInfo ti, size_t[] dims) @weak
         return null;
     else
     {
-        return _d_newarrayOpT!(_d_newarrayT)(ti, dims);
+        return _d_newarrayOpT!(_d_newarrayT)(ti, dims, file, line);
     }
 }
 
 /// ditto
-extern (C) void[] _d_newarraymiTX(const TypeInfo ti, size_t[] dims) @weak
+extern (C) void[] _d_newarraymiTX(const TypeInfo ti, size_t[] dims, string file, uint line) @weak
 {
     debug(PRINTF) printf("_d_newarraymiT(dims.length = %d)\n", dims.length);
 
@@ -1184,7 +1187,7 @@ extern (C) void[] _d_newarraymiTX(const TypeInfo ti, size_t[] dims) @weak
         return null;
     else
     {
-        return _d_newarrayOpT!(_d_newarrayiT)(ti, dims);
+        return _d_newarrayOpT!(_d_newarrayiT)(ti, dims, file, line);
     }
 }
 
@@ -1526,7 +1529,8 @@ Params:
         While it's cast to `void[]`, its `.length` is still treated as element length.
 Returns: `*p` after being updated
 */
-extern (C) void[] _d_arraysetlengthT(const TypeInfo ti, size_t newlength, void[]* p) @weak
+extern (C) void[] _d_arraysetlengthT(const TypeInfo ti, size_t newlength, void[]* p,
+                                     string file, uint line) @weak
 in
 {
     assert(ti);
@@ -1598,7 +1602,7 @@ do
     if (!(*p).ptr)
     {
         // pointer was null, need to allocate
-        auto info = __arrayAlloc(newsize, ti, tinext);
+        auto info = __arrayAlloc(newsize, ti, tinext, file, line);
         if (info.base is null)
         {
             onOutOfMemoryError();
@@ -1637,6 +1641,7 @@ do
                 {
                     // not enough space, try extending
                     auto extendsize = newsize + offset + LARGEPAD - info.size;
+                    // TODO need info ?
                     auto u = GC.extend(info.base, extendsize, extendsize);
                     if (u)
                     {
@@ -1686,11 +1691,11 @@ do
                 // a chance that flags have changed since this was cached, we should fetch the most recent flags
                 info.attr = GC.getAttr(info.base) | BlkAttr.APPENDABLE;
             }
-            info = __arrayAlloc(newsize, info, ti, tinext);
+            info = __arrayAlloc(newsize, info, ti, tinext, file, line);
         }
         else
         {
-            info = __arrayAlloc(newsize, ti, tinext);
+            info = __arrayAlloc(newsize, ti, tinext, file, line);
         }
 
         if (info.base is null)
@@ -1720,7 +1725,8 @@ do
 }
 
 /// ditto
-extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p) @weak
+extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p, 
+                                      string file, uint line) @weak
 in
 {
     assert(!(*p).length || (*p).ptr);
@@ -1808,7 +1814,7 @@ do
     if (!(*p).ptr)
     {
         // pointer was null, need to allocate
-        auto info = __arrayAlloc(newsize, ti, tinext);
+        auto info = __arrayAlloc(newsize, ti, tinext, file, line);
         if (info.base is null)
         {
             onOutOfMemoryError();
@@ -1897,11 +1903,11 @@ do
                 // a chance that flags have changed since this was cached, we should fetch the most recent flags
                 info.attr = GC.getAttr(info.base) | BlkAttr.APPENDABLE;
             }
-            info = __arrayAlloc(newsize, info, ti, tinext);
+            info = __arrayAlloc(newsize, info, ti, tinext, file, line);
         }
         else
         {
-            info = __arrayAlloc(newsize, ti, tinext);
+            info = __arrayAlloc(newsize, ti, tinext, file, line);
         }
 
         if (info.base is null)
@@ -2029,7 +2035,8 @@ Params:
 Returns: `px` after being appended to
 */
 extern (C)
-byte[] _d_arrayappendcTX(const TypeInfo ti, return scope ref byte[] px, size_t n) @weak
+byte[] _d_arrayappendcTX(const TypeInfo ti, return scope ref byte[] px, size_t n,
+                         string file, uint line) @weak
 {
     import core.stdc.string;
     // This is a cut&paste job from _d_arrayappendT(). Should be refactored.
@@ -2108,11 +2115,11 @@ byte[] _d_arrayappendcTX(const TypeInfo ti, return scope ref byte[] px, size_t n
                 // a chance that flags have changed since this was cached, we should fetch the most recent flags
                 info.attr = GC.getAttr(info.base) | BlkAttr.APPENDABLE;
             }
-            info = __arrayAlloc(newcap, info, ti, tinext);
+            info = __arrayAlloc(newcap, info, ti, tinext, file, line);
         }
         else
         {
-            info = __arrayAlloc(newcap, ti, tinext);
+            info = __arrayAlloc(newcap, ti, tinext, file, line);
         }
         __setArrayAllocLength(info, newsize, isshared, tinext);
         if (!isshared)
@@ -2146,7 +2153,7 @@ Params:
     c = `dchar` to append
 Returns: updated `x` cast to `void[]`
 */
-extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c) @weak
+extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line) @weak
 {
     // c could encode into from 1 to 4 characters
     char[4] buf = void;
@@ -2191,7 +2198,7 @@ extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c) @weak
 
     // Hack because _d_arrayappendT takes `x` as a reference
     auto xx = cast(shared(char)[])x;
-    object._d_arrayappendT(xx, cast(shared(char)[])appendthis);
+    object._d_arrayappendT(xx, cast(shared(char)[])appendthis, file, line);
     x = cast(byte[])xx;
     return x;
 }
@@ -2243,7 +2250,7 @@ Params:
 
 Returns: updated `x` cast to `void[]`
 */
-extern (C) void[] _d_arrayappendwd(ref byte[] x, dchar c) @weak
+extern (C) void[] _d_arrayappendwd(ref byte[] x, dchar c, string file, uint line) @weak
 {
     // c could encode into from 1 to 2 w characters
     wchar[2] buf = void;
@@ -2267,7 +2274,7 @@ extern (C) void[] _d_arrayappendwd(ref byte[] x, dchar c) @weak
     //
 
     auto xx = (cast(shared(wchar)*)x.ptr)[0 .. x.length];
-    object._d_arrayappendT(xx, cast(shared(wchar)[])appendthis);
+    object._d_arrayappendT(xx, cast(shared(wchar)[])appendthis, file, line);
     x = (cast(byte*)xx.ptr)[0 .. xx.length];
     return x;
 }
@@ -2341,7 +2348,7 @@ do
     if (!len)
         return null;
 
-    auto info = __arrayAlloc(len, ti, tinext);
+    auto info = __arrayAlloc(len, ti, tinext, "_d_arraycatT: TODO", 0);
     byte* p = cast(byte*)__arrayStart(info);
     p[len] = 0; // guessing this is to optimize for null-terminated arrays?
     memcpy(p, x.ptr, xlen);
@@ -2392,7 +2399,7 @@ extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs) @weak
         return null;
 
     auto allocsize = length * size;
-    auto info = __arrayAlloc(allocsize, ti, tinext);
+    auto info = __arrayAlloc(allocsize, ti, tinext, "_d_arraycatnTX: TODO", 0);
     auto isshared = typeid(ti) is typeid(TypeInfo_Shared);
     __setArrayAllocLength(info, allocsize, isshared, tinext);
     void *a = __arrayStart (info);
@@ -2449,7 +2456,7 @@ void* _d_arrayliteralTX(const TypeInfo ti, size_t length) @weak
     else
     {
         auto allocsize = length * sizeelem;
-        auto info = __arrayAlloc(allocsize, ti, tinext);
+        auto info = __arrayAlloc(allocsize, ti, tinext, "TODO", 123);
         auto isshared = typeid(ti) is typeid(TypeInfo_Shared);
         __setArrayAllocLength(info, allocsize, isshared, tinext);
         result = __arrayStart(info);

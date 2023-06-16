@@ -10,7 +10,7 @@
 module core.internal.array.appending;
 
 /// See $(REF _d_arrayappendcTX, rt,lifetime,_d_arrayappendcTX)
-private extern (C) byte[] _d_arrayappendcTX(const TypeInfo ti, ref return scope byte[] px, size_t n) @trusted pure nothrow;
+private extern (C) byte[] _d_arrayappendcTX(const TypeInfo ti, ref return scope byte[] px, size_t n, string file, uint line) @trusted pure nothrow;
 
 private enum isCopyingNothrow(T) = __traits(compiles, (ref T rhs) nothrow { T lhs = rhs; });
 
@@ -32,7 +32,7 @@ template _d_arrayappendcTXImpl(Tarr : T[], T)
      *  purity, and throwabilty checks. To prevent breaking existing code, this function template
      *  is temporarily declared `@trusted pure` until the implementation can be brought up to modern D expectations.
      */
-    ref Tarr _d_arrayappendcTX(return ref scope Tarr px, size_t n) @trusted pure nothrow
+    ref Tarr _d_arrayappendcTX(return ref scope Tarr px, size_t n, string file , uint line) @trusted pure nothrow
     {
         // needed for CTFE: https://github.com/dlang/druntime/pull/3870#issuecomment-1178800718
         pragma(inline, false);
@@ -43,7 +43,7 @@ template _d_arrayappendcTXImpl(Tarr : T[], T)
             // _d_arrayappendcTX takes the `px` as a ref byte[], but its length
             // should still be the original length
             auto pxx = (cast(byte*)px.ptr)[0 .. px.length];
-            ._d_arrayappendcTX(ti, pxx, n);
+            ._d_arrayappendcTX(ti, pxx, n, file, line);
             px = (cast(T*)pxx.ptr)[0 .. pxx.length];
 
             return px;
@@ -68,7 +68,7 @@ template _d_arrayappendcTXImpl(Tarr : T[], T)
 }
 
 /// Implementation of `_d_arrayappendT`
-ref Tarr _d_arrayappendT(Tarr : T[], T)(return ref scope Tarr x, scope Tarr y) @trusted
+ref Tarr _d_arrayappendT(Tarr : T[], T)(return ref scope Tarr x, scope Tarr y, string file, uint line) @trusted
 {
     pragma(inline, false);
 
@@ -78,7 +78,7 @@ ref Tarr _d_arrayappendT(Tarr : T[], T)(return ref scope Tarr x, scope Tarr y) @
     enum hasPostblit = __traits(hasPostblit, T);
     auto length = x.length;
 
-    _d_arrayappendcTXImpl!Tarr._d_arrayappendcTX(x, y.length);
+    _d_arrayappendcTXImpl!Tarr._d_arrayappendcTX(x, y.length, file, line);
 
     // Only call `copyEmplace` if `T` has a copy ctor and no postblit.
     static if (hasElaborateCopyConstructor!T && !hasPostblit)

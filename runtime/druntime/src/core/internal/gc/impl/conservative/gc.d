@@ -153,7 +153,7 @@ private GC initialize_precise()
     return initialize();
 }
 
-private struct DebugInfo
+struct DebugInfo
 {
   string filename;
   uint line;
@@ -169,7 +169,7 @@ private struct DebugInfo
         filename.length = 0;
 
       stringDescr = cast(char*)malloc(
-          (filename.length + cast(int)log10(line) + type.length + 
+          (filename.length + cast(int)log10(line + 1) + type.length + 
            4 + // litterals added in final string : ' ', '(', ':', ')'
            2 // null character + rounding of log10
            ) * char.sizeof);
@@ -2350,7 +2350,7 @@ struct Gcx
 
         debug(MARK_PRINTF)
             printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
-        verbose_printf(1, "\tmarking first range: [%p..%p] (%#llx)\n", 
+        verbose_printf(2, "\tmarking first range: [%p..%p] (%#llx)\n", 
                           rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         // limit the amount of ranges added to the toscan stack
@@ -2429,7 +2429,7 @@ struct Gcx
                     if(config.verbose)
                     {
                       auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
-                      verbose_printf(1, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
+                      verbose_printf(2, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
                       verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
                       verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
                     }
@@ -2556,7 +2556,7 @@ struct Gcx
                     rng = toscan.pop();
                 }
             }
-            verbose_printf(1, "\t\tnext range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+            verbose_printf(2, "\t\tnext range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
             // printf("  pop [%p..%p] (%#zx)\n", p1, p2, cast(size_t)p2 - cast(size_t)p1);
             goto LcontRange;
 
@@ -2584,7 +2584,7 @@ struct Gcx
         LendOfRange:
             // continue with last found range
             rng = tgt;
-            verbose_printf(1, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+            verbose_printf(2, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         LcontRange:
             pcache = 0;
@@ -2639,7 +2639,7 @@ struct Gcx
     // collection step 2: mark roots and heap
     void markAll(alias markFn)(bool nostack) nothrow
     {
-        verbose_printf(1, "\t============= MARKING ==============\n");
+        verbose_printf(2, "\t============= MARKING ==============\n");
         if (!nostack)
         {
             debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
@@ -2893,14 +2893,6 @@ struct Gcx
                         }
                         else
                         {
-                            /* verbose_printf(1, "free some part of page\n"); */
-                            /* static foreach (w; 0 .. PageBits.length) */
-                            /* { */
-                                /* if(toFree[w]) */
-                                  /* verbose_printf(1, "[pool little object] p=%p\n", */ 
-                                  /*     pool.baseAddr + pn * PAGESIZE + w * binsize[bin]); */
-                            /* } */
-
                             pool.freePageBits(pn, toFree);
 
                             // add to recover chain
@@ -3929,7 +3921,6 @@ struct Pool
             if (!w) continue;
 
             immutable wi = beg + i;
-            printf("freeing %#x\n", cast(uint)wi);
             freebits.data[wi] |= w;
             noscan.data[wi] &= ~w;
             appendable.data[wi] &= ~w;

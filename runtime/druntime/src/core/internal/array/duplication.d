@@ -8,7 +8,8 @@ Source: $(DRUNTIMESRC core/internal/_array/_duplication.d)
 */
 module core.internal.array.duplication;
 
-private extern (C) void[] _d_newarrayU(const scope TypeInfo ti, size_t length) pure nothrow;
+private extern(C) void[] _d_newarrayU(const TypeInfo ti, size_t length, 
+                                      string file = __FILE__, uint line = __LINE__) pure nothrow;
 
 U[] _dup(T, U)(scope T[] a) pure nothrow @trusted if (__traits(isPOD, T))
 {

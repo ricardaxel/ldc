@@ -338,6 +338,9 @@ llvm::Function *getRuntimeFunction(const Loc &loc, llvm::Module &target,
 
   if (LLFunction *existing = target.getFunction(name)) {
     if (existing->getFunctionType() != fnty) {
+      /* fnty->dump(); */
+      /* existing->getFunctionType()->dump(); */
+      /* target.dump(); */
       error(Loc(), "Incompatible declaration of runtime function `%s`", name);
       fatal();
     }
@@ -587,36 +590,36 @@ static void buildRuntimeModule() {
   // void* _d_allocmemoryT(TypeInfo ti)
   createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemoryT"}, {typeInfoTy});
 
-  // void[] _d_newarrayT (const TypeInfo ti, size_t length)
-  // void[] _d_newarrayiT(const TypeInfo ti, size_t length)
-  // void[] _d_newarrayU (const TypeInfo ti, size_t length)
+  // void[] _d_newarrayT (const TypeInfo ti, size_t length, string file, uint line)
+  // void[] _d_newarrayiT(const TypeInfo ti, size_t length, string file, uint line)
+  // void[] _d_newarrayU (const TypeInfo ti, size_t length, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy,
                 {"_d_newarrayT", "_d_newarrayiT", "_d_newarrayU"},
-                {typeInfoTy, sizeTy}, {STCconst, 0});
+                {typeInfoTy, sizeTy, stringTy, uintTy}, {STCconst, 0});
 
-  // void[] _d_newarraymTX (const TypeInfo ti, size_t[] dims)
-  // void[] _d_newarraymiTX(const TypeInfo ti, size_t[] dims)
+  // void[] _d_newarraymTX (const TypeInfo ti, size_t[] dims, string file, uint line)
+  // void[] _d_newarraymiTX(const TypeInfo ti, size_t[] dims, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_newarraymTX", "_d_newarraymiTX"},
-                {typeInfoTy, sizeTy->arrayOf()}, {STCconst, 0});
+                {typeInfoTy, sizeTy->arrayOf(), stringTy, uintTy}, {STCconst, 0});
 
-  // void[] _d_arraysetlengthT (const TypeInfo ti, size_t newlength, void[]* p)
-  // void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p)
+  // void[] _d_arraysetlengthT (const TypeInfo ti, size_t newlength, void[]* p, string file, uint line)
+  // void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy,
                 {"_d_arraysetlengthT", "_d_arraysetlengthiT"},
-                {typeInfoTy, sizeTy, voidArrayPtrTy}, {STCconst, 0, 0});
+                {typeInfoTy, sizeTy, voidArrayPtrTy,  stringTy, uintTy}, {STCconst, 0, 0});
 
-  // void[] _d_arrayappendcd(ref byte[] x, dchar c)
-  // void[] _d_arrayappendwd(ref byte[] x, dchar c)
+  // void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line)
+  // void[] _d_arrayappendwd(ref byte[] x, dchar c, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arrayappendcd", "_d_arrayappendwd"},
-                {voidArrayTy, dcharTy}, {STCref, 0});
+                {voidArrayTy, dcharTy,  stringTy, uintTy}, {STCref, 0});
 
-  // byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y)
+  // byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arraycatT"},
-                {typeInfoTy, voidArrayTy, voidArrayTy}, {STCconst, 0, 0});
+                {typeInfoTy, voidArrayTy, voidArrayTy, /*stringTy, uintTy*/}, {STCconst, 0, 0});
 
-  // void[] _d_arraycatnTX(const TypeInfo ti, byte[][] arrs)
+  // void[] _d_arraycatnTX(const TypeInfo ti, byte[][] arrs, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arraycatnTX"},
-                {typeInfoTy, voidArrayTy->arrayOf()}, {STCconst, 0});
+                {typeInfoTy, voidArrayTy->arrayOf(), /*stringTy, uintTy*/}, {STCconst, 0});
 
   // Object _d_newclass(const ClassInfo ci)
   createFwdDecl(LINK::c, objectTy, {"_d_newclass"},

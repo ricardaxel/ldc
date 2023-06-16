@@ -14,7 +14,6 @@
  */
 
 module rt.tracegc;
-
 // version = tracegc;
 
 extern (C) Object _d_newclass(const ClassInfo ci);

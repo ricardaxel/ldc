@@ -663,16 +663,24 @@ DSliceValue *DtoNewDynArray(const Loc &loc, Type *arrayType, DValue *dim,
                            : "_d_newarrayU";
   LLFunction *fn = getRuntimeFunction(loc, gIR->module, fnname);
 
+  llvm::SmallVector<llvm::Value *, 4> args;
   // typeinfo arg
-  LLValue *arrayTypeInfo = DtoTypeInfoOf(loc, arrayType);
+  args.push_back(DtoTypeInfoOf(loc, arrayType));
 
   // dim arg
   assert(DtoType(dim->type) == DtoSize_t());
   LLValue *arrayLen = DtoRVal(dim);
+  args.push_back(arrayLen);
+
+  // file arg
+  args.push_back(DtoConstString(loc.filename));
+
+  // line arg
+  args.push_back(DtoConstUint(loc.linnum));
 
   // call allocator
   LLValue *newArray =
-      gIR->CreateCallOrInvoke(fn, arrayTypeInfo, arrayLen, ".gc_mem");
+      gIR->CreateCallOrInvoke(fn, args, ".gc_mem");
 
   // return a DSliceValue with the well-known length for better optimizability
   auto ptr =
@@ -697,8 +705,10 @@ DSliceValue *DtoNewMulDimDynArray(const Loc &loc, Type *arrayType,
       vtype->isZeroInit() ? "_d_newarraymTX" : "_d_newarraymiTX";
   LLFunction *fn = getRuntimeFunction(loc, gIR->module, fnname);
 
+  llvm::SmallVector<llvm::Value *, 4> args;
+
   // typeinfo arg
-  LLValue *arrayTypeInfo = DtoTypeInfoOf(loc, arrayType);
+  args.push_back(DtoTypeInfoOf(loc, arrayType));
 
   // Check if constant
   bool allDimsConst = true;
@@ -739,9 +749,17 @@ DSliceValue *DtoNewMulDimDynArray(const Loc &loc, Type *arrayType,
   DtoStore(DtoBitCast(array, getPtrToType(DtoSize_t())),
            DtoGEP(dtype, darray, 0, 1, ".ptr"));
 
+  args.push_back(DtoLoad(dtype, darray));
+
+  // file arg
+  args.push_back(DtoConstString(loc.filename));
+
+  // line arg
+  args.push_back(DtoConstUint(loc.linnum));
+
   // call allocator
   LLValue *newptr =
-      gIR->CreateCallOrInvoke(fn, arrayTypeInfo, DtoLoad(dtype, darray), ".gc_mem");
+      gIR->CreateCallOrInvoke(fn, args, ".gc_mem");
 
   IF_LOG Logger::cout() << "final ptr = " << *newptr << '\n';
 
@@ -768,10 +786,14 @@ DSliceValue *DtoResizeDynArray(const Loc &loc, Type *arrayType, DValue *array,
       getRuntimeFunction(loc, gIR->module, zeroInit ? "_d_arraysetlengthT"
                                                     : "_d_arraysetlengthiT");
 
-  LLValue *newArray = gIR->CreateCallOrInvoke(
-      fn, DtoTypeInfoOf(loc, arrayType), newdim,
-      DtoBitCast(DtoLVal(array), fn->getFunctionType()->getParamType(2)),
-      ".gc_mem");
+  llvm::SmallVector<llvm::Value *, 5> args;
+  args.push_back(DtoTypeInfoOf(loc, arrayType));
+  args.push_back(newdim);
+  args.push_back(DtoBitCast(DtoLVal(array), fn->getFunctionType()->getParamType(2)));
+  args.push_back(DtoConstString(loc.filename));
+  args.push_back(DtoConstUint(loc.linnum));
+
+  LLValue *newArray = gIR->CreateCallOrInvoke(fn, args, ".gc_mem");
 
   return getSlice(arrayType, newArray);
 }
@@ -811,7 +833,7 @@ DSliceValue *DtoCatArrays(const Loc &loc, Type *arrayType, Expression *exp1,
   IF_LOG Logger::println("DtoCatArrays");
   LOG_SCOPE;
 
-  llvm::SmallVector<llvm::Value *, 3> args;
+  llvm::SmallVector<llvm::Value *, 5> args;
   LLFunction *fn = nullptr;
 
   if (auto ce = exp1->isCatExp()) { // handle multiple concat
@@ -871,6 +893,11 @@ DSliceValue *DtoCatArrays(const Loc &loc, Type *arrayType, Expression *exp1,
     args.push_back(loadArray(exp2,2));
   }
 
+  /* // file */
+  /* args.push_back(DtoConstString(loc.filename)); */
+  /* // line */
+  /* args.push_back(DtoConstUint(loc.linnum)); */
+
   auto newArray = gIR->CreateCallOrInvoke(fn, args, ".appendedArray");
   return getSlice(arrayType, newArray);
 }
@@ -884,11 +911,14 @@ DSliceValue *DtoAppendDChar(const Loc &loc, DValue *arr, Expression *exp,
   // Prepare arguments
   LLFunction *fn = getRuntimeFunction(loc, gIR->module, func);
 
+  LLSmallVector<LLValue *, 4> args;
+  args.push_back(DtoBitCast(DtoLVal(arr), fn->getFunctionType()->getParamType(0)));
+  args.push_back(DtoBitCast(valueToAppend, fn->getFunctionType()->getParamType(1)));
+  args.push_back(DtoConstString(loc.filename));
+  args.push_back(DtoConstUint(loc.linnum));
+
   // Call function (ref string x, dchar c)
-  LLValue *newArray = gIR->CreateCallOrInvoke(
-      fn, DtoBitCast(DtoLVal(arr), fn->getFunctionType()->getParamType(0)),
-      DtoBitCast(valueToAppend, fn->getFunctionType()->getParamType(1)),
-      ".appendedArray");
+  LLValue *newArray = gIR->CreateCallOrInvoke(fn, args,".appendedArray");
 
   return getSlice(arr->type, newArray);
 }

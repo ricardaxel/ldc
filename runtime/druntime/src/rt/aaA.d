@@ -688,7 +688,7 @@ extern (C) inout(void[]) _aaValues(inout AA aa, const size_t keysz, const size_t
 
     import rt.lifetime : _d_newarrayU;
 
-    auto res = _d_newarrayU(tiValueArray, aa.length).ptr;
+    auto res = _d_newarrayU(tiValueArray, aa.length, "__aaValues TODO", 123).ptr;
     auto pval = res;
 
     immutable off = aa.valoff;
@@ -711,7 +711,7 @@ extern (C) inout(void[]) _aaKeys(inout AA aa, const size_t keysz, const TypeInfo
 
     import rt.lifetime : _d_newarrayU;
 
-    auto res = _d_newarrayU(tiKeyArray, aa.length).ptr;
+    auto res = _d_newarrayU(tiKeyArray, aa.length, "__aaKeys TODO", 123).ptr;
     auto pkey = res;
 
     foreach (b; aa.buckets[aa.firstUsed .. $])

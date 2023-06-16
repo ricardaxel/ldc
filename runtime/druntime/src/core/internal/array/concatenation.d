@@ -9,7 +9,7 @@
 module core.internal.array.concatenation;
 
 /// See $(REF _d_arraycatnTX, rt,lifetime)
-private extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs) pure nothrow;
+private extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs, string file, uint line) pure nothrow;
 
 /// Implementation of `_d_arraycatnTX` and `_d_arraycatnTXTrace`
 template _d_arraycatnTXImpl(Tarr : ResultArrT[], ResultArrT : T[], T)
@@ -36,7 +36,7 @@ template _d_arraycatnTXImpl(Tarr : ResultArrT[], ResultArrT : T[], T)
             auto ti = typeid(ResultArrT);
 
             byte[][] arrs2 = (cast(byte[]*)arrs.ptr)[0 .. arrs.length];
-            void[] result = ._d_arraycatnTX(ti, arrs2);
+            void[] result = ._d_arraycatnTX(ti, arrs2, "", 0);
             return (cast(T*)result.ptr)[0 .. result.length];
         }
         else
@@ -71,7 +71,7 @@ template _d_arraycatnTXImpl(Tarr : ResultArrT[], ResultArrT : T[], T)
     }
 
     S[][] arr = [[S(0), S(1), S(2), S(3)], [S(4), S(5), S(6), S(7)]];
-    S[] result = _d_arraycatnTXImpl!(typeof(arr))._d_arraycatnTX(arr);
+    S[] result = _d_arraycatnTXImpl!(typeof(arr))._d_arraycatnTX(arr, "", 1);
 
     assert(counter == 8);
     assert(result == [S(0), S(1), S(2), S(3), S(4), S(5), S(6), S(7)]);
