@@ -157,6 +157,7 @@ struct DebugInfo
 {
   string filename;
   uint line;
+  size_t size;
   string type;
 
   uint age; // gains one year per collection
@@ -168,21 +169,25 @@ struct DebugInfo
       if(filename.length > int.max)
         filename.length = 0;
 
+      // todo use snprintf instead
       stringDescr = cast(char*)malloc(
           (filename.length + cast(int)log10(line + 1) + type.length + 
-           4 + // litterals added in final string : ' ', '(', ':', ')'
-           2 // null character + rounding of log10
+           cast(int)log10(line + 1) +
+           12 + // litterals added in final string
+           3 // null character + roundings of log10
            ) * char.sizeof);
 
-      sprintf(stringDescr, "%.*s (%.*s:%d)", 
-          cast(int)type.length, type.ptr, cast(int)filename.length, filename.ptr, line);
+      sprintf(stringDescr, "%.*s (%.*s:%d; %lu bytes)", 
+          cast(int)type.length, type.ptr, 
+          cast(int)filename.length, filename.ptr, 
+          line, size);
     }
   }
 
   ~this() nothrow @nogc
   {
-    /* if(stringDescr) */
-    /*   free(stringDescr); */
+    if(stringDescr)
+      free(stringDescr);
   }
 
   const(char*) toStringz() nothrow @nogc const
@@ -566,13 +571,13 @@ class ConservativeGC : GC
 
         if(config.verbose)
         {
-          auto d = DebugInfo(file, line, debugTypeName(ti));
+          auto d = DebugInfo(file, line, size, debugTypeName(ti));
           d.setupDescription();
           gcx.allocatedObj.insert(p, d);
         }
 
         verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
-        verbose_printf(1, "new '%s'", debugTypeName(ti).ptr);
+        verbose_printf(1, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
         verbose_printf(1, " => p = %p\n", p);
 
         debug(PRINTF) printf("  => p = %p\n", p);
@@ -810,9 +815,17 @@ class ConservativeGC : GC
 
         if(config.verbose)
         {
-          auto d = DebugInfo("ReallocNoSync", __LINE__, debugTypeName(ti));
+          // TODO
+          auto file = "ReallocNoSync";
+          auto line = __LINE__;
+
+          auto d = DebugInfo(file, line, size, debugTypeName(ti));
           d.setupDescription();
           gcx.allocatedObj.insert(p, d);
+
+          verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
+          verbose_printf(1, "realloc '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
+          verbose_printf(1, " => p = %p\n", p);
         }
         return p;
     }
