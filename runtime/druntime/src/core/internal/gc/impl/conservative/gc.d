@@ -2874,10 +2874,6 @@ struct Gcx
                             }
                         }
 
-                        if(config.verbose)
-                          foreach(_, ref debugInfo; allocatedObj)
-                            debugInfo.age++;
-
                         // free all allocated object in page
                         if (recoverPage)
                         {
@@ -2901,6 +2897,10 @@ struct Gcx
                         }
                     }
                 }
+
+                if(config.verbose)
+                  foreach(_, ref debugInfo; allocatedObj)
+                    debugInfo.age++;
             }
         }
 
