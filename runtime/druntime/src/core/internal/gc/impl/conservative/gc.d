@@ -2388,7 +2388,7 @@ struct Gcx
             auto p = *cast(void**)(rng.pbot);
 
             debug(MARK_PRINTF) printf("\tmark %p: %p\n", rng.pbot, p);
-            verbose_printf(2, "\tmark %p: %p\n", rng.pbot, p);
+            verbose_printf(3, "\tmark %p: %p\n", rng.pbot, p);
 
             if (cast(size_t)(p - minAddr) < memSize &&
                 (cast(size_t)p & ~cast(size_t)(PAGESIZE-1)) != pcache)
@@ -2442,9 +2442,9 @@ struct Gcx
                     if(config.verbose)
                     {
                       auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
-                      verbose_printf(2, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
-                      verbose_printf(2, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
-                      verbose_printf(2, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
+                      verbose_printf(3, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
+                      verbose_printf(3, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
+                      verbose_printf(3, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
                     }
 
                     // We don't care abou setting pointsToBase correctly
