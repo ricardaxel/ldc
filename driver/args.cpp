@@ -159,11 +159,20 @@ struct ResponseFile {
 
 int executeAndWait(
     std::vector<const char *> fullArgs,
+#if LDC_LLVM_VER < 1600
     llvm::Optional<llvm::sys::WindowsEncodingMethod> responseFileEncoding,
+#else
+    std::optional<llvm::sys::WindowsEncodingMethod>  responseFileEncoding,
+#endif
     std::string *errorMsg) {
   args::ResponseFile rspFile;
+#if LDC_LLVM_VER < 1600
   if (responseFileEncoding.hasValue() &&
       !rspFile.setup(fullArgs, responseFileEncoding.getValue())) {
+#else
+  if (responseFileEncoding.has_value() &&
+      !rspFile.setup(fullArgs, responseFileEncoding.value())) {
+#endif
     if (errorMsg)
       *errorMsg = "could not write temporary response file";
     return -1;
