@@ -334,7 +334,7 @@ struct NoGCAssociativeArray(Key, Value)
     return m_Keys.contains(key);
   }
 
-  const(Value) opIndex(in Key key) const @nogc
+  inout(Value) opIndex(inout Key key) inout @nogc
   {
     assert(exists(key));
     return m_Values[m_Keys.firstIndexOf(key)];

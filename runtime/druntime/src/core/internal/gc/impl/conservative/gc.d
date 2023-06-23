@@ -54,7 +54,7 @@ version (GNU) import gcc.builtins;
 version (LDC) import ldc.attributes;
 
 debug (PRINTF_TO_FILE) import core.stdc.stdio : sprintf, fprintf, fopen, fflush, FILE;
-else                   import core.stdc.stdio : sprintf, printf, vfprintf, stderr; // needed to output profiling results
+else                   import core.stdc.stdio : sprintf, snprintf, printf, vfprintf, stderr; // needed to output profiling results
 
 import core.time;
 alias currTime = MonoTime.currTime;
@@ -169,22 +169,22 @@ struct DebugInfo
       if(filename.length > int.max)
         filename.length = 0;
 
-      // todo use snprintf instead
-      stringDescr = cast(char*)malloc(
-          (filename.length + cast(int)log10(line + 1) + type.length + 
-           cast(int)log10(line + 1) +
-           12 + // litterals added in final string
-           3 // null character + roundings of log10
-           ) * char.sizeof);
+      stringDescr = cast(char*)malloc(char.sizeof);
 
-      sprintf(stringDescr, "%.*s (%.*s:%d; %lu bytes)", 
+      int s = snprintf(stringDescr, 1, "%.*s (%.*s:%d; %lu bytes)", 
+          cast(int)type.length, type.ptr, 
+          cast(int)filename.length, filename.ptr, 
+          line, size);
+
+      stringDescr = cast(char*)realloc(stringDescr, s * char.sizeof);
+      snprintf(stringDescr, s, "%.*s (%.*s:%d; %lu bytes)", 
           cast(int)type.length, type.ptr, 
           cast(int)filename.length, filename.ptr, 
           line, size);
     }
   }
 
-  ~this() nothrow @nogc
+  void destroyDescr() nothrow @nogc
   {
     if(stringDescr)
       free(stringDescr);
@@ -192,6 +192,7 @@ struct DebugInfo
 
   const(char*) toStringz() nothrow @nogc const
   {
+    assert(stringDescr);
     return stringDescr;
   }
 
@@ -2876,6 +2877,7 @@ struct Gcx
                                       verbose_printf(1, "\tFreeing %s (%p). AGE :  %u/%u \n", 
                                           debugInfo.toStringz, p, debugInfo.age,
                                           numCollections + 1);
+                                      debugInfo.destroyDescr();
                                       allocatedObj.remove(p);
                                     }
 
