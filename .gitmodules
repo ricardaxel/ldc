@@ -1,3 +1,3 @@
 [submodule "phobos"]
 	path = runtime/phobos
-	url = git@github.com:ricardaxel/phobos.git 
+	url = https://github.com/ricardaxel/phobos 
