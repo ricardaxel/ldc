@@ -4,7 +4,8 @@ INSTRUMENTED LDC
 This project is forked from the official [LDC compiler](https://github.com/ldc-developers/ldc)
 and adds an overhead that give information about Garbage Collection.
 
-This branch is currently based on version : *v1.32.0*
+This branch is currently based on version : *v1.32.0*, with a patch to compile with 
+llvm-16 (see `git diff v1.32.0..v1.32.0-llvm16`)
 
 Usage
 -----
