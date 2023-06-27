@@ -85,8 +85,12 @@ LLValue *DtoNew(const Loc &loc, Type *newtype) {
   // get type info
   LLConstant *ti = DtoTypeInfoOf(loc, newtype);
   assert(isaPointer(ti));
+  
+  auto file = DtoConstString(loc.filename);
+  auto line = DtoConstUint(loc.linnum);
+
   // call runtime allocator
-  LLValue *mem = gIR->CreateCallOrInvoke(fn, ti, ".gc_mem");
+  LLValue *mem = gIR->CreateCallOrInvoke(fn, ti, file, line, ".gc_mem");
   // cast
   return DtoBitCast(mem, DtoPtrToType(newtype), ".gc_mem");
 }

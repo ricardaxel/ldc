@@ -584,11 +584,11 @@ static void buildRuntimeModule() {
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
 
-  // void* _d_allocmemory(size_t sz)
-  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemory"}, {sizeTy});
+  // void* _d_allocmemory(size_t sz, string file, uint line, string capturedData)
+  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemory"}, {sizeTy, stringTy, uintTy, stringTy});
 
-  // void* _d_allocmemoryT(TypeInfo ti)
-  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemoryT"}, {typeInfoTy});
+  // void* _d_allocmemoryT(TypeInfo ti, string file, uint line)
+  createFwdDecl(LINK::c, voidPtrTy, {"_d_allocmemoryT"}, {typeInfoTy, stringTy, uintTy});
 
   // void[] _d_newarrayT (const TypeInfo ti, size_t length, string file, uint line)
   // void[] _d_newarrayiT(const TypeInfo ti, size_t length, string file, uint line)

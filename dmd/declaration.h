@@ -745,6 +745,7 @@ public:
     const char *kind() const override;
     bool isUnique();
     bool needsClosure();
+    VarDeclarations allocatedClosureVars();
     bool checkClosure();
     bool hasNestedFrameRefs();
     ParameterList getParameterList();
