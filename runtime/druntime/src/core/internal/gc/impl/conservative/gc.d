@@ -570,16 +570,16 @@ class ConservativeGC : GC
         gcx.leakDetector.log_malloc(p, size);
         bytesAllocated += alloc_size;
 
-        if(config.verbose)
+        if(config.verbose >= 2)
         {
           auto d = DebugInfo(file, line, size, debugTypeName(ti));
           d.setupDescription();
           gcx.allocatedObj.insert(p, d);
         }
 
-        verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
-        verbose_printf(1, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
-        verbose_printf(1, " => p = %p\n", p);
+        verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
+        verbose_printf(2, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
+        verbose_printf(2, " => p = %p\n", p);
 
         debug(PRINTF) printf("  => p = %p\n", p);
         return p;
@@ -814,7 +814,7 @@ class ConservativeGC : GC
             pool.setBits(biti, bits);
         }
 
-        if(config.verbose)
+        if(config.verbose >= 2)
         {
           // TODO
           auto file = "ReallocNoSync";
@@ -824,9 +824,9 @@ class ConservativeGC : GC
           d.setupDescription();
           gcx.allocatedObj.insert(p, d);
 
-          verbose_printf(1, "[%.*s:%d] ", file.length, file.ptr, line);
-          verbose_printf(1, "realloc '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
-          verbose_printf(1, " => p = %p\n", p);
+          verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
+          verbose_printf(2, "realloc '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
+          verbose_printf(2, " => p = %p\n", p);
         }
         return p;
     }
@@ -2364,7 +2364,7 @@ struct Gcx
 
         debug(MARK_PRINTF)
             printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
-        verbose_printf(2, "\tmarking first range: [%p..%p] (%#llx)\n", 
+        verbose_printf(3, "\tmarking first range: [%p..%p] (%#llx)\n", 
                           rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         // limit the amount of ranges added to the toscan stack
@@ -2389,7 +2389,7 @@ struct Gcx
             auto p = *cast(void**)(rng.pbot);
 
             debug(MARK_PRINTF) printf("\tmark %p: %p\n", rng.pbot, p);
-            verbose_printf(3, "\tmark %p: %p\n", rng.pbot, p);
+            verbose_printf(4, "\tmark %p: %p\n", rng.pbot, p);
 
             if (cast(size_t)(p - minAddr) < memSize &&
                 (cast(size_t)p & ~cast(size_t)(PAGESIZE-1)) != pcache)
@@ -2440,7 +2440,7 @@ struct Gcx
                 // Adjust bit to be at start of allocated memory block
                 if (bin < Bins.B_PAGE)
                 {
-                    if(config.verbose)
+                    if(config.verbose >= 3)
                     {
                       auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
                       verbose_printf(3, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
@@ -2570,7 +2570,7 @@ struct Gcx
                     rng = toscan.pop();
                 }
             }
-            verbose_printf(2, "\t\tnext range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+            verbose_printf(3, "\t\tnext range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
             // printf("  pop [%p..%p] (%#zx)\n", p1, p2, cast(size_t)p2 - cast(size_t)p1);
             goto LcontRange;
 
@@ -2598,7 +2598,7 @@ struct Gcx
         LendOfRange:
             // continue with last found range
             rng = tgt;
-            verbose_printf(2, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
+            verbose_printf(3, "end of range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
 
         LcontRange:
             pcache = 0;
@@ -2653,7 +2653,7 @@ struct Gcx
     // collection step 2: mark roots and heap
     void markAll(alias markFn)(bool nostack) nothrow
     {
-        verbose_printf(2, "\t============= MARKING ==============\n");
+        verbose_printf(3, "\t============= MARKING ==============\n");
         if (!nostack)
         {
             debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
@@ -2738,7 +2738,7 @@ struct Gcx
                     if (!pool.mark.test(biti))
                     {
                         void *p = pool.baseAddr + pn * PAGESIZE;
-                        verbose_printf(1, "[pool large object] p=%p\n", p);
+                        verbose_printf(2, "[pool large object] p=%p\n", p);
                         void* q = sentinel_add(p);
                         sentinel_Invariant(q);
 
@@ -2871,10 +2871,10 @@ struct Gcx
 
                                     assert(core.bitop.bt(toFree.ptr, i));
 
-                                    if(config.verbose)
+                                    if(config.verbose >= 2)
                                     {
                                       auto debugInfo = allocatedObj[p];
-                                      verbose_printf(1, "\tFreeing %s (%p). AGE :  %u/%u \n", 
+                                      verbose_printf(2, "\tFreeing %s (%p). AGE :  %u/%u \n", 
                                           debugInfo.toStringz, p, debugInfo.age,
                                           numCollections + 1);
                                       debugInfo.destroyDescr();
@@ -2913,7 +2913,7 @@ struct Gcx
                     }
                 }
 
-                if(config.verbose)
+                if(config.verbose >= 2)
                   foreach(_, ref debugInfo; allocatedObj)
                     debugInfo.age++;
             }
