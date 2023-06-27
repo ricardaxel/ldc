@@ -63,9 +63,9 @@ Params:
 
 Returns: pointer to `sz` bytes of free, uninitialized memory, managed by the GC.
 */
-extern (C) void* _d_allocmemory(size_t sz) @weak
+extern (C) void* _d_allocmemory(size_t sz, string file, uint line, string capturedVars) @weak
 {
-    return GC.malloc(sz);
+    return GC.malloc(sz, 0, null, file, line, capturedVars);
 }
 
 

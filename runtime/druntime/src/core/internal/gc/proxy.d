@@ -161,9 +161,10 @@ extern (C)
     }
 
     void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                     in string file = __FILE__, int line = __LINE__) nothrow
+                     in string file = __FILE__, int line = __LINE__, 
+                     string additionalInfo = "") nothrow
     {
-        return instance.malloc(sz, ba, ti, file, line);
+        return instance.malloc(sz, ba, ti, file, line, additionalInfo);
     }
 
     BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,

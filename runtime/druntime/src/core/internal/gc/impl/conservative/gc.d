@@ -160,6 +160,9 @@ struct DebugInfo
   size_t size;
   string type;
 
+  bool isLambda;
+  string capturedData;
+
   uint age; // gains one year per collection
 
   void setupDescription() nothrow @nogc
@@ -171,15 +174,13 @@ struct DebugInfo
 
       stringDescr = cast(char*)malloc(char.sizeof);
 
-      int s = snprintf(stringDescr, 1, "%.*s (%.*s:%d; %lu bytes)", 
-          cast(int)type.length, type.ptr, 
-          cast(int)filename.length, filename.ptr, 
+      int s = snprintf(stringDescr, 1, "%s (%s:%d; %lu bytes)", 
+          isLambda ? capturedData.ptr : type.ptr, filename.ptr, 
           line, size);
 
       stringDescr = cast(char*)realloc(stringDescr, s * char.sizeof);
-      snprintf(stringDescr, s, "%.*s (%.*s:%d; %lu bytes)", 
-          cast(int)type.length, type.ptr, 
-          cast(int)filename.length, filename.ptr, 
+      snprintf(stringDescr, s, "%s (%s:%d; %lu bytes)", 
+          isLambda ? capturedData.ptr : type.ptr, filename.ptr, 
           line, size);
     }
   }
@@ -522,7 +523,7 @@ class ConservativeGC : GC
      *  OutOfMemoryError on allocation failure
      */
     void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
-                 in string file = "", int line = 0)
+                 in string file = "", int line = 0, string additionalInfo = "")
     nothrow
     {
         if (!size)
@@ -532,7 +533,7 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line, additionalInfo);
 
         if (!(bits & BlkAttr.NO_SCAN))
         {
@@ -547,7 +548,7 @@ class ConservativeGC : GC
     // Implementation for malloc and calloc.
     //
     private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
-                               in string file = "", int line = 0) nothrow
+                               in string file = "", int line = 0, in string additionalInfo = "") nothrow
     {
         assert(size != 0);
 
@@ -572,14 +573,18 @@ class ConservativeGC : GC
 
         if(config.verbose >= 2)
         {
-          auto d = DebugInfo(file, line, size, debugTypeName(ti));
+          auto d = DebugInfo(file, line, size, debugTypeName(ti), 
+                             additionalInfo.length != 0, additionalInfo);
           d.setupDescription();
           gcx.allocatedObj.insert(p, d);
-        }
 
-        verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
-        verbose_printf(2, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
-        verbose_printf(2, " => p = %p\n", p);
+          verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
+          if(d.isLambda)
+            verbose_printf(2, "captured '%s' (%lu bytes)", d.capturedData.ptr, size);
+          else
+            verbose_printf(2, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
+          verbose_printf(2, " => p = %p\n", p);
+        }
 
         debug(PRINTF) printf("  => p = %p\n", p);
         return p;

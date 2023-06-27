@@ -82,7 +82,7 @@ interface GC
      *
      */
     void* malloc(size_t size, uint bits, const TypeInfo ti,
-                 string file, int line) nothrow;
+                 string file, int line, string additionalInfo) nothrow;
 
     /*
      *

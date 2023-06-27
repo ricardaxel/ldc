@@ -464,7 +464,7 @@ extern(C):
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
         pragma(mangle, "gc_malloc") static void* malloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-            string file = __FILE__, int line = __LINE__) pure nothrow;
+            string file = __FILE__, int line = __LINE__, string additionalInfo = "") pure nothrow;
 
     /**
      * Requests an aligned block of managed memory from the garbage collector.

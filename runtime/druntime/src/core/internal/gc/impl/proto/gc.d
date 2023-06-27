@@ -18,7 +18,7 @@ private
     extern (C) void gc_enable() nothrow;
     extern (C) void gc_disable() nothrow;
 
-    extern (C) void*    gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0 ) pure nothrow;
+    extern (C) void*    gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0, string additionalInfo = "" ) pure nothrow;
     extern (C) void*    gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo = null ) pure nothrow;
     extern (C) BlkInfo  gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0) pure nothrow;
     extern (C) void*    gc_realloc(return scope void* p, size_t sz, uint ba = 0, const scope TypeInfo = null ) pure nothrow;
@@ -100,10 +100,10 @@ class ProtoGC : GC
     }
 
     void* malloc(size_t size, uint bits, const scope TypeInfo ti, 
-                 string file, int line) nothrow
+                 string file, int line, string additionalInfo) nothrow
     {
         .gc_init_nothrow();
-        return .gc_malloc(size, bits, ti, file, line);
+        return .gc_malloc(size, bits, ti, file, line, additionalInfo);
     }
 
     BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti,
