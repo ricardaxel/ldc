@@ -81,3 +81,60 @@ int main()
 
 ```
 
+Example (delegates)
+-------------------
+
+```
+╰─> cat test3.d
+import std.stdio;
+import core.memory;
+
+alias DG = void delegate();
+
+DG captureDgData()
+{
+  int a = 3;
+
+  // dg references local a ==> needs memory allocation
+  auto dg = () { a++; };
+
+  return dg;
+}
+
+void nestedCapture()
+{
+  DG c1 = captureDgData();
+}
+
+// clear stack
+void clobber() { int[2048] x; }
+
+void main()
+{
+  nestedCapture();
+  DG c2= captureDgData();
+  GC.collect();
+}
+
+
+╰─> ldc2 -g -O0 test3.d --disable-gc2stack --disable-d-passes --of test3.d
+
+╰─> ./test3 "--DRT-gcopt=cleanup:collect fork:0 parallel:0 verbose:2" 
+[test3.d:6] captured '[a]' (4 bytes) => p = 0x7f02638fe000
+[test3.d:6] captured '[a]' (4 bytes) => p = 0x7f02638fe010
+
+============ COLLECTION (from :0)  =============
+        ============= SWEEPING ==============
+        Freeing [a] (test3.d:6; 4 bytes (0x7f02638fe000). AGE :  0/1 
+=====================================================
+
+
+============ COLLECTION (from :0)  =============
+        ============= SWEEPING ==============
+        Freeing [a] (test3.d:6; 4 bytes (0x7f02638fe010). AGE :  1/2 
+=====================================================
+
+
+```
+
+
