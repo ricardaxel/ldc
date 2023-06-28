@@ -2851,6 +2851,9 @@ struct Gcx
                             static foreach (w; 0 .. PageBits.length)
                                 doLoop = doLoop || (toFree[w] & finalsdata[w]) != 0;
                         }
+                        else
+                          doLoop = true; // enable looping
+
 
                         if (doLoop)
                         {
