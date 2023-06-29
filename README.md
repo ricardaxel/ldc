@@ -16,6 +16,31 @@ Usage
 Note : for now, this only works for non-forked single threaded GC, so you might
 need to add theses runtime options as well : "--DRT-gcopt=fork:0 parallel:0"
 
+Allocations handling status
+---------------------------
+
+### Classes :
+
+- [x] new Class (_d_allocclass)
+```
+class C { ... }
+C c = new C();
+```
+
+### Array :
+
+- [ ] 2 arrays concatenation (_d_arraycatT)
+```
+int[] x = [10, 20, 30];
+int[] y = [40, 50];
+int[] c = x ~ y; // _d_arraycatT(typeid(int[]), (cast(byte*) x)[0..x.length], (cast(byte*) y)[0..y.length]);
+```
+
+  - [ ] N (> 2) arrays concatenation (_d_arraycatnTX)
+```
+int[] a, b, c;
+int[] res = a ~ b ~ c; // _d_arraycatnTX(typeid(int[]), [(cast(byte*)a.ptr)[0..a.length], (cast(byte*)b.ptr)[0..b.length], (cast(byte*)c.ptr)[0..c.length]]);
+```
 
 Example
 -------
