@@ -64,8 +64,16 @@ DLValue *DtoAAIndex(const Loc &loc, Type *type, DValue *aa, DValue *key,
         DtoTypeInfoOf(loc, aa->type->unSharedOf()->mutableOf(), /*base=*/false);
     LLValue *castedAATI = DtoBitCast(rawAATI, funcTy->getParamType(1));
     LLValue *valsize = DtoConstSize_t(getTypeAllocSize(DtoType(type)));
-    ret = gIR->CreateCallOrInvoke(func, aaval, castedAATI, valsize, pkey,
-                                  "aa.index");
+
+    llvm::SmallVector<llvm::Value *, 6> args;
+    args.push_back(aaval);
+    args.push_back(castedAATI);
+    args.push_back(valsize);
+    args.push_back(pkey);
+    args.push_back(DtoConstString(loc.filename));
+    args.push_back(DtoConstUint(loc.linnum));
+
+    ret = gIR->CreateCallOrInvoke(func, args, "aa.index");
   } else {
     LLValue *keyti = to_keyti(loc, aa, funcTy->getParamType(1));
     ret = gIR->CreateCallOrInvoke(func, aaval, keyti, pkey, "aa.index");

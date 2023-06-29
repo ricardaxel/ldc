@@ -740,9 +740,10 @@ static void buildRuntimeModule() {
   //////////////////////////////////////////////////////////////////////////////
 
   // void* _aaGetY(AA* aa, const TypeInfo aati, in size_t valuesize,
-  //               in void* pkey)
+  //               in void* pkey, string file, uint line)
   createFwdDecl(LINK::c, voidPtrTy, {"_aaGetY"},
-                {aaTy->pointerTo(), aaTypeInfoTy, sizeTy, voidPtrTy},
+                {aaTy->pointerTo(), aaTypeInfoTy, sizeTy, voidPtrTy,
+                 stringTy, uintTy},
                 {0, STCconst, STCin, STCin}, Attr_1_4_NoCapture);
 
   // inout(void)* _aaInX(inout AA aa, in TypeInfo keyti, in void* pkey)
