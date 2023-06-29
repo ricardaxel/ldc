@@ -2922,7 +2922,7 @@ extern (C)
     }
 
     // size_t _aaLen(in AA aa) pure nothrow @nogc;
-    private void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey) pure nothrow;
+    private void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey, string file, uint line) pure nothrow;
     private void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti, const size_t valsz, const scope void* pkey, out bool found) pure nothrow;
     // inout(void)* _aaGetRvalueX(inout AA aa, in TypeInfo keyti, in size_t valsz, in void* pkey);
     inout(void[]) _aaValues(inout AA aa, const size_t keysz, const size_t valsz, const TypeInfo tiValueArray) pure nothrow;
@@ -3063,7 +3063,7 @@ V[K] dup(T : V[K], K, V)(T aa)
     {
         import core.stdc.string : memcpy;
 
-        void* pv = _aaGetY(cast(AA*)&result, typeid(V[K]), V.sizeof, &k);
+        void* pv = _aaGetY(cast(AA*)&result, typeid(V[K]), V.sizeof, &k, "test", 123);
         memcpy(pv, &v, V.sizeof);
         return *cast(V*)pv;
     }

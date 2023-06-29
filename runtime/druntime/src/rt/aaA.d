@@ -64,11 +64,12 @@ else
 private struct Impl
 {
 private:
-    this(scope const TypeInfo_AssociativeArray ti, size_t sz = INIT_NUM_BUCKETS) nothrow
+    this(scope const TypeInfo_AssociativeArray ti, size_t sz = INIT_NUM_BUCKETS,
+         string file = "", uint line = 0) nothrow
     {
         keysz = cast(uint) ti.key.tsize;
         valsz = cast(uint) ti.value.tsize;
-        buckets = allocBuckets(sz);
+        buckets = allocBuckets(sz, file, line);
         firstUsed = cast(uint) buckets.length;
         valoff = cast(uint) talign(keysz, ti.value.talign);
 
@@ -139,26 +140,26 @@ private:
         }
     }
 
-    void grow(scope const TypeInfo keyti) pure nothrow
+    void grow(scope const TypeInfo keyti, string file, uint line) pure nothrow
     {
         // If there are so many deleted entries, that growing would push us
         // below the shrink threshold, we just purge deleted entries instead.
         if (length * SHRINK_DEN < GROW_FAC * dim * SHRINK_NUM)
-            resize(dim);
+            resize(dim, file, line);
         else
-            resize(GROW_FAC * dim);
+            resize(GROW_FAC * dim, file, line);
     }
 
-    void shrink(scope const TypeInfo keyti) pure nothrow
+    void shrink(scope const TypeInfo keyti, string file, uint line) pure nothrow
     {
         if (dim > INIT_NUM_BUCKETS)
-            resize(dim / GROW_FAC);
+            resize(dim / GROW_FAC, file, line);
     }
 
-    void resize(size_t ndim) pure nothrow
+    void resize(size_t ndim, string file, uint line) pure nothrow
     {
         auto obuckets = buckets;
-        buckets = allocBuckets(ndim);
+        buckets = allocBuckets(ndim, file, line);
 
         foreach (ref b; obuckets[firstUsed .. $])
             if (b.filled)
@@ -206,18 +207,20 @@ private pure nothrow @nogc:
     }
 }
 
-Bucket[] allocBuckets(size_t dim) @trusted pure nothrow
+Bucket[] allocBuckets(size_t dim, string file, uint line) @trusted pure nothrow
 {
     enum attr = GC.BlkAttr.NO_INTERIOR;
     immutable sz = dim * Bucket.sizeof;
-    return (cast(Bucket*) GC.calloc(sz, attr))[0 .. dim];
+    return (cast(Bucket*) GC.calloc(sz, attr, null, file, line, "Alloc AA Bucket"))[0 .. dim];
 }
 
 //==============================================================================
 // Entry
 //------------------------------------------------------------------------------
 
-private void* allocEntry(scope const Impl* aa, scope const void* pkey)
+private void* allocEntry(scope const Impl* aa, scope const void* pkey,
+                         // TODO remove default values
+                         string file = "", uint line = 0)
 {
     import rt.lifetime : _d_newitemU;
     import core.stdc.string : memcpy, memset;
@@ -229,7 +232,7 @@ private void* allocEntry(scope const Impl* aa, scope const void* pkey)
     else
     {
         auto flags = (aa.flags & Impl.Flags.hasPointers) ? 0 : GC.BlkAttr.NO_SCAN;
-        res = GC.malloc(akeysz + aa.valsz, flags);
+        res = GC.malloc(akeysz + aa.valsz, flags, null, file, line, "AA new entry");
     }
 
     memcpy(res, pkey, aa.keysz); // copy key
@@ -532,10 +535,10 @@ extern (C) size_t _aaLen(scope const AA aa) pure nothrow @nogc
  *      is set to all zeros
  */
 extern (C) void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti,
-    const size_t valsz, scope const void* pkey)
+    const size_t valsz, scope const void* pkey, string file, uint line)
 {
     bool found;
-    return _aaGetX(paa, ti, valsz, pkey, found);
+    return _aaGetX(paa, ti, valsz, pkey, found, file, line);
 }
 
 /******************************
@@ -553,13 +556,14 @@ extern (C) void* _aaGetY(scope AA* paa, const TypeInfo_AssociativeArray ti,
  *      is set to all zeros
  */
 extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
-    const size_t valsz, scope const void* pkey, out bool found)
+    const size_t valsz, scope const void* pkey, out bool found,
+    string file = "", uint line = 0)
 {
     // lazily alloc implementation
     AA aa = *paa;
     if (aa is null)
     {
-        aa = new Impl(ti);
+        aa = new Impl(ti, INIT_NUM_BUCKETS, file, line);
         *paa = aa;
     }
 
@@ -579,7 +583,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     // check load factor and possibly grow
     else if (++aa.used * GROW_DEN > aa.dim * GROW_NUM)
     {
-        aa.grow(ti.key);
+        aa.grow(ti.key, file, line);
         p = aa.findSlotInsert(hash);
         assert(p.empty);
     }
@@ -587,7 +591,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     // update search cache and allocate entry
     aa.firstUsed = min(aa.firstUsed, cast(uint)(p - aa.buckets.ptr));
     p.hash = hash;
-    p.entry = allocEntry(aa, pkey);
+    p.entry = allocEntry(aa, pkey, file, line);
     // postblit for key
     if (aa.flags & Impl.Flags.keyHasPostblit)
     {
@@ -654,7 +658,8 @@ extern (C) bool _aaDelX(AA aa, scope const TypeInfo keyti, scope const void* pke
         // `shrink` reallocates, and allocating from a finalizer leads to
         // InvalidMemoryError: https://issues.dlang.org/show_bug.cgi?id=21442
         if (aa.length * SHRINK_DEN < aa.dim * SHRINK_NUM && !GC.inFinalizer())
-            aa.shrink(keyti);
+            // TODO
+            aa.shrink(keyti, __FILE__, __LINE__);
 
         return true;
     }
@@ -675,7 +680,7 @@ extern (C) void* _aaRehash(AA* paa, scope const TypeInfo keyti) pure nothrow
 {
     AA aa = *paa;
     if (!aa.empty)
-        aa.resize(nextpow2(INIT_DEN * aa.length / INIT_NUM));
+        aa.resize(nextpow2(INIT_DEN * aa.length / INIT_NUM), __FILE__, __LINE__);
     return aa;
 }
 

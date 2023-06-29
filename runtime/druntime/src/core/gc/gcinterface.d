@@ -93,7 +93,8 @@ interface GC
     /*
      *
      */
-    void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow;
+    void* calloc(size_t size, uint bits, const TypeInfo ti,
+                 string file, int line, string additionalInfo) nothrow;
 
     /*
      *

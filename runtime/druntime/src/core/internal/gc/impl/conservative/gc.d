@@ -628,7 +628,8 @@ class ConservativeGC : GC
      * Throws:
      *  OutOfMemoryError on allocation failure.
      */
-    void *calloc(size_t size, uint bits = 0, const TypeInfo ti = null) nothrow
+    void *calloc(size_t size, uint bits = 0, const TypeInfo ti = null,
+                 in string file = "", int line = 0, in string additionalInfo = "") nothrow
     {
         if (!size)
         {
@@ -636,10 +637,7 @@ class ConservativeGC : GC
         }
 
         size_t localAllocSize = void;
-
-        string file = "TODO -- calloc";
-        auto line = 123; 
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line, additionalInfo);
 
         memset(p, 0, size);
         if (!(bits & BlkAttr.NO_SCAN))

@@ -120,7 +120,7 @@ class ManualGC : GC
         return retval;
     }
 
-    void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow
+    void* calloc(size_t size, uint bits, const TypeInfo ti, string, int, string) nothrow
     {
         void* p = cstdlib.calloc(1, size);
 
