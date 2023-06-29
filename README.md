@@ -112,6 +112,9 @@ aa[0] = 0; // new entry ==> allocation of (Key.sizeof + Value.sizeof) bytes
 aa[0] = 1; // already allocated ==> nothing to do
  ```
 
+- [ ] entry deletion (__aaDelX) : if new version of aa is 'short' enough, it will be shrinked, which implies a reallocation 
+- [ ] rehash (object.d:rehash --> __aaRehash)
+ 
 Example
 -------
 
