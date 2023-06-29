@@ -104,10 +104,13 @@ void f()
 ```
 
 ### Associative Arrays
-TODO
 
-### Misc :
-
+- [ ] new entry added (__aaGetY)
+```
+double[int] aa;
+aa[0] = 0; // new entry ==> allocation of (Key.sizeof + Value.sizeof) bytes 
+aa[0] = 1; // already allocated ==> nothing to do
+ ```
 
 Example
 -------
