@@ -100,7 +100,10 @@ LLValue *DtoNewStruct(const Loc &loc, TypeStruct *newtype) {
       loc, gIR->module,
       newtype->isZeroInit(newtype->sym->loc) ? "_d_newitemT" : "_d_newitemiT");
   LLConstant *ti = DtoTypeInfoOf(loc, newtype);
-  LLValue *mem = gIR->CreateCallOrInvoke(fn, ti, ".gc_struct");
+  auto file = DtoConstString(loc.filename);
+  auto line = DtoConstUint(loc.linnum);
+
+  LLValue *mem = gIR->CreateCallOrInvoke(fn, ti, file, line, ".gc_struct");
   return DtoBitCast(mem, DtoPtrToType(newtype), ".gc_struct");
 }
 

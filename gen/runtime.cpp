@@ -633,10 +633,10 @@ static void buildRuntimeModule() {
   createFwdDecl(LINK::c, throwableTy, {"_d_newThrowable"}, {classInfoTy},
                 {STCconst});
 
-  // void* _d_newitemT (TypeInfo ti)
-  // void* _d_newitemiT(TypeInfo ti)
+  // void* _d_newitemT (TypeInfo ti, string file, uint line)
+  // void* _d_newitemiT(TypeInfo ti, string file, uint line)
   createFwdDecl(LINK::c, voidPtrTy, {"_d_newitemT", "_d_newitemiT"},
-                {typeInfoTy}, {0});
+                {typeInfoTy, stringTy, uintTy}, {0});
 
   // void _d_delarray_t(void[]* p, const TypeInfo_Struct ti)
   createFwdDecl(LINK::c, voidTy, {"_d_delarray_t"},
