@@ -219,8 +219,7 @@ Bucket[] allocBuckets(size_t dim, string file, uint line) @trusted pure nothrow
 //------------------------------------------------------------------------------
 
 private void* allocEntry(scope const Impl* aa, scope const void* pkey,
-                         // TODO remove default values
-                         string file = "", uint line = 0)
+                         string file, uint line)
 {
     import rt.lifetime : _d_newitemU;
     import core.stdc.string : memcpy, memset;
@@ -510,9 +509,9 @@ pure nothrow @nogc unittest
  * Returns:
  *      A new associative array.
  */
-extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti)
+extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
 {
-    return new Impl(ti);
+    return new Impl(ti, INIT_NUM_BUCKETS, file, line);
 }
 
 /// Determine number of entries in associative array.
@@ -778,7 +777,7 @@ extern (C) int _aaApply2(AA aa, const size_t keysz, dg2_t dg)
  *      A new associative array opaque pointer, or null if `keys` is empty.
  */
 extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys,
-    void[] vals)
+    void[] vals, string file, uint line)
 {
     assert(keys.length == vals.length);
 
@@ -789,7 +788,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
     if (!length)
         return null;
 
-    auto aa = new Impl(ti, nextpow2(INIT_DEN * length / INIT_NUM));
+    auto aa = new Impl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
 
     void* pkey = keys.ptr;
     void* pval = vals.ptr;
@@ -804,7 +803,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
         {
             p = aa.findSlotInsert(hash);
             p.hash = hash;
-            p.entry = allocEntry(aa, pkey); // move key, no postblit
+            p.entry = allocEntry(aa, pkey, file, line); // move key, no postblit
             aa.firstUsed = min(aa.firstUsed, cast(uint)(p - aa.buckets.ptr));
             actualLength++;
         }

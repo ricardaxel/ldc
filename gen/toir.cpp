@@ -1587,7 +1587,9 @@ public:
       LLValue *aaTypeInfo =
           DtoBitCast(DtoTypeInfoOf(e->loc, stripModifiers(taa), /*base=*/false),
                      DtoType(getAssociativeArrayTypeInfoType()));
-      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, "aa");
+      LLConstant* filename = DtoConstString(e->loc.filename);
+      llvm::ConstantInt* linNum = DtoConstUint(e->loc.linnum) ;
+      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, filename, linNum, "aa");
       result = new DImValue(e->type, aa);
     }
     // new basic type
@@ -2517,8 +2519,15 @@ public:
       slice = DtoConstSlice(DtoConstSize_t(e->keys->length), slice);
       LLValue *valuesArray = DtoSlicePaint(slice, funcTy->getParamType(2));
 
-      LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, keysArray,
-                                            valuesArray, "aa");
+
+      llvm::SmallVector<llvm::Value *, 5> args;
+      args.push_back(aaTypeInfo);
+      args.push_back(keysArray);
+      args.push_back(valuesArray);
+      args.push_back(DtoConstString(e->loc.filename));
+      args.push_back(DtoConstUint(e->loc.linnum));
+
+      LLValue *aa = gIR->CreateCallOrInvoke(func, args, "aa");
       if (basetype->ty != TY::Taarray) {
         LLValue *tmp = DtoAlloca(e->type, "aaliteral");
         DtoStore(aa, DtoGEP(DtoType(e->type), tmp, 0u, 0));
