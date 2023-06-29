@@ -228,7 +228,7 @@ private void* allocEntry(scope const Impl* aa, scope const void* pkey,
     immutable akeysz = aa.valoff;
     void* res = void;
     if (aa.entryTI)
-        res = _d_newitemU(aa.entryTI);
+        res = _d_newitemU(aa.entryTI, file, line);
     else
     {
         auto flags = (aa.flags & Impl.Flags.hasPointers) ? 0 : GC.BlkAttr.NO_SCAN;

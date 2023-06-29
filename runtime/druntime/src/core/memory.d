@@ -1509,7 +1509,7 @@ unittest
 }
 
 // in rt.lifetime:
-private extern (C) void* _d_newitemU(scope const TypeInfo _ti) @system pure nothrow;
+private extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) @system pure nothrow;
 
 /**
 Moves a value to a new GC allocation.
@@ -1526,7 +1526,7 @@ T* moveToGC(T)(auto ref T value)
     static T* doIt(ref T value) @trusted
     {
         import core.lifetime : moveEmplace;
-        auto mem = cast(T*) _d_newitemU(typeid(T)); // allocate but don't initialize
+        auto mem = cast(T*) _d_newitemU(typeid(T), __FILE__, __LINE__); // allocate but don't initialize
         moveEmplace(value, *mem);
         return mem;
     }

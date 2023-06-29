@@ -1217,7 +1217,7 @@ Params:
 Returns:
     newly allocated item
 */
-extern (C) void* _d_newitemU(scope const TypeInfo _ti) pure nothrow @weak
+extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) pure nothrow @weak
 {
     auto ti = unqualify(_ti);
     auto flags = !(ti.flags & 1) ? BlkAttr.NO_SCAN : 0;
@@ -1227,7 +1227,7 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti) pure nothrow @weak
     if (tiSize)
         flags |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto blkInf = GC.qalloc(size, flags, ti, "_d_newitemU", 123);
+    auto blkInf = GC.qalloc(size, flags, ti, file, line);
     auto p = blkInf.base;
 
     if (tiSize)
@@ -1241,19 +1241,19 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti) pure nothrow @weak
 }
 
 /// ditto
-extern (C) void* _d_newitemT(in TypeInfo _ti) pure nothrow @weak
+extern (C) void* _d_newitemT(in TypeInfo _ti, string file, uint line) pure nothrow @weak
 {
     import core.stdc.string;
-    auto p = _d_newitemU(_ti);
+    auto p = _d_newitemU(_ti, file, line);
     memset(p, 0, _ti.tsize);
     return p;
 }
 
 /// Same as above, for item with non-zero initializer.
-extern (C) void* _d_newitemiT(in TypeInfo _ti) pure nothrow @weak
+extern (C) void* _d_newitemiT(in TypeInfo _ti, string file, uint line) pure nothrow @weak
 {
     import core.stdc.string;
-    auto p = _d_newitemU(_ti);
+    auto p = _d_newitemU(_ti, file, line);
     auto init = _ti.initializer();
     assert(init.length <= _ti.tsize);
     memcpy(p, init.ptr, init.length);
