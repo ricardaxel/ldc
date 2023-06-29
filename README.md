@@ -27,7 +27,33 @@ class C { ... }
 C c = new C();
 ```
 
+<details>
+<summary><b>Note</b></summary>
+dmd use `_d_allocclass` to allocate class. One can find such function in ldc runtime, but it is never directly called from generated IR 
+
+![image](https://github.com/ricardaxel/ldc/assets/46921637/d021494b-7d24-4320-ac74-da3bdc1ef1a6)
+</details>
+
 ### Array :
+
+- [x] new array (_d_newarrayU / _d_newarrayT / _d_newarrayiT)
+```
+int[] arr = new int[3]; // `_d_newarrayT` : initializes to 0
+float[] arr2 = new float[3]; // `_d_newarrayiT` : initializes based on initializer retrieved from TypeInfo
+int[] arr3 = [1, 2, 3]; // `_d_newarrayU` :  leave elements uninitialized (compiler set them just after allocation=
+double[] arr = uninitializedArray!(double[])(100); // call `_d_newarrayU` under the hood
+```
+- [x] array length set (_d_arraysetlengthT / _d_arraysetlengthiT)  (partially handled, would need better log info)
+```
+int[] arr;
+arr.length = 2; // _d_arraysetlengthT
+```
+- [x] array append (_d_arrayappendT / _d_arrayappendcTX / _d_arrayappendcd / _d_arrayappendwd)  (partially handled, would need better log info)
+```
+int[] a = [1, 2, 3];
+a ~= 1; // _d_arrayappendcTX
+a ~= [1, 2]; // _d_arrayappendT
+```
 
 - [ ] 2 arrays concatenation (_d_arraycatT)
 ```
