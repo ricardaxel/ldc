@@ -67,6 +67,34 @@ int[] c = x ~ y; // _d_arraycatT(typeid(int[]), (cast(byte*) x)[0..x.length], (c
 int[] a, b, c;
 int[] res = a ~ b ~ c; // _d_arraycatnTX(typeid(int[]), [(cast(byte*)a.ptr)[0..a.length], (cast(byte*)b.ptr)[0..b.length], (cast(byte*)c.ptr)[0..c.length]]);
 ```
+### Delegates
+
+- [x] Allocation of local variable captured by a delegate
+```
+void f()
+{
+	int a = 3;
+	int b = 2;
+
+	// trigger a GC allocation to store a and b
+	// allocation made with _d_allocmemory, at the entry of the function f()	
+  	auto dg = () => a + b; 
+}
+```
+
+### Associative Arrays
+TODO
+
+### Misc :
+
+- [ ] Allocation of uninitialized non-array item (_d_newitemU / _d_newitemT / _d_newitemiT)
+```
+struct Sz {int x = 0;}
+struct Si {int x = 3;}
+
+new Sz(); // _d_newitemT(typeid(Sz)) 
+new Si(); // _d_newitemiT(typeid(Si))
+```
 
 Example
 -------
