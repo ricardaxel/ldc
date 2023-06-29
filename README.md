@@ -19,12 +19,12 @@ need to add theses runtime options as well : "--DRT-gcopt=fork:0 parallel:0"
 Allocations handling status
 ---------------------------
 
-### Classes :
+### Using `new` :
 
 - [x] new Class (_d_allocclass)
 ```
 class C { ... }
-C c = new C();
+C c = new C(); // _d_allocclass
 ```
 
 <details>
@@ -33,6 +33,20 @@ dmd use `_d_allocclass` to allocate class. One can find such function in ldc run
 
 ![image](https://github.com/ricardaxel/ldc/assets/46921637/d021494b-7d24-4320-ac74-da3bdc1ef1a6)
 </details>
+
+- [ ] `new`  uninitialized non-array item (_d_newitemU / _d_newitemT / _d_newitemiT)
+```
+struct Sz {int x = 0;}
+struct Si {int x = 3;}
+
+new Sz(); // _d_newitemT(typeid(Sz)) 
+new Si(); // _d_newitemiT(typeid(Si))
+```
+- [ ] `new` basic type (_d_allocmemoryT)
+
+```
+auto a = new int; // _d_allocmemoryT
+```
 
 ### Array :
 
@@ -67,6 +81,13 @@ int[] c = x ~ y; // _d_arraycatT(typeid(int[]), (cast(byte*) x)[0..x.length], (c
 int[] a, b, c;
 int[] res = a ~ b ~ c; // _d_arraycatnTX(typeid(int[]), [(cast(byte*)a.ptr)[0..a.length], (cast(byte*)b.ptr)[0..b.length], (cast(byte*)c.ptr)[0..c.length]]);
 ```
+
+- [ ] Slice copy (_d_array_slice_copy)
+```
+int[] b = new int[3];
+b[0 .. $] = [1, 2, 3]; // _d_array_slice_copy
+```
+
 ### Delegates
 
 - [x] Allocation of local variable captured by a delegate
@@ -87,14 +108,6 @@ TODO
 
 ### Misc :
 
-- [ ] Allocation of uninitialized non-array item (_d_newitemU / _d_newitemT / _d_newitemiT)
-```
-struct Sz {int x = 0;}
-struct Si {int x = 3;}
-
-new Sz(); // _d_newitemT(typeid(Sz)) 
-new Si(); // _d_newitemiT(typeid(Si))
-```
 
 Example
 -------
