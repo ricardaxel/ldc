@@ -2524,8 +2524,8 @@ public:
       args.push_back(aaTypeInfo);
       args.push_back(keysArray);
       args.push_back(valuesArray);
-      args.push_back(DtoConstString(e->loc.filename));
-      args.push_back(DtoConstUint(e->loc.linnum));
+      /* args.push_back(DtoConstString(e->loc.filename)); */
+      /* args.push_back(DtoConstUint(e->loc.linnum)); */
 
       LLValue *aa = gIR->CreateCallOrInvoke(func, args, "aa");
       if (basetype->ty != TY::Taarray) {

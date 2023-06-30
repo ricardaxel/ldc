@@ -2952,7 +2952,7 @@ extern (C)
         Early compiler didn't check purity of toHash or postblit functions, if key is a UDT thus
         copiler allowed to create AA literal with keys, which have impure unsafe toHash methods.
     */
-    void* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys, void[] values, string file, uint line) pure;
+    void* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys, void[] values, string file = __FILE__, uint line = __LINE__) pure;
 }
 
 void* aaLiteral(Key, Value)(Key[] keys, Value[] values, string, uint) @trusted pure

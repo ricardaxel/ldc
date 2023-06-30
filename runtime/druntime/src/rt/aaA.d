@@ -777,7 +777,7 @@ extern (C) int _aaApply2(AA aa, const size_t keysz, dg2_t dg)
  *      A new associative array opaque pointer, or null if `keys` is empty.
  */
 extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void[] keys,
-    void[] vals, string file, uint line)
+    void[] vals, string file = __FILE__, uint line = __LINE__)
 {
     assert(keys.length == vals.length);
 

@@ -763,7 +763,7 @@ static void buildRuntimeModule() {
   //                           void[] keys, void[] values,
   //                           string file, uint line)
   createFwdDecl(LINK::c, aaTy, {"_d_assocarrayliteralTX"},
-                {aaTypeInfoTy, voidArrayTy, voidArrayTy, stringTy, uintTy}, {STCconst, 0, 0});
+                {aaTypeInfoTy, voidArrayTy, voidArrayTy, /*stringTy, uintTy*/}, {STCconst, 0, 0});
 
   // AA _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
   createFwdDecl(LINK::c, aaTy, {"_aaNew"}, {aaTypeInfoTy, stringTy, uintTy}, {STCconst});
