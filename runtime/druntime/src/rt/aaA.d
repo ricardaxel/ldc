@@ -212,7 +212,7 @@ Bucket[] allocBuckets(size_t dim, string file, uint line) @trusted pure nothrow
 {
     enum attr = GC.BlkAttr.NO_INTERIOR;
     immutable sz = dim * Bucket.sizeof;
-    return (cast(Bucket*) GC.calloc(sz, attr, null, DebugInfo.alloc(file, line, sz, typeid(Bucket))))[0 .. dim];
+    return (cast(Bucket*) GC.calloc(sz, attr, null, DebugInfo.alloc(file, line, sz, "AA Bucket")))[0 .. dim];
 }
 
 //==============================================================================
@@ -232,7 +232,7 @@ private void* allocEntry(scope const Impl* aa, scope const void* pkey,
     else
     {
         auto flags = (aa.flags & Impl.Flags.hasPointers) ? 0 : GC.BlkAttr.NO_SCAN;
-        res = GC.malloc(akeysz + aa.valsz, flags, null, DebugInfo.alloc(file, line, akeysz + aa.valsz, typeid(aa)));
+        res = GC.malloc(akeysz + aa.valsz, flags, null, DebugInfo.alloc(file, line, akeysz + aa.valsz, "AA entry"));
     }
 
     memcpy(res, pkey, aa.keysz); // copy key
@@ -505,6 +505,20 @@ pure nothrow @nogc unittest
 // API Implementation
 //------------------------------------------------------------------------------
 
+// implementation of 
+// return new Impl(ti, INIT_NUM_BUCKETS, file, line);
+Impl* newImpl(const TypeInfo_AssociativeArray ti, ulong numBuckets, string file, uint line)
+{
+  import rt.lifetime:  _d_newitemT;
+  import core.lifetime:  moveEmplace;
+  Impl* newAA = cast(Impl*) _d_newitemT (typeid(Impl), file, line);
+
+  auto i = Impl(ti, numBuckets, file, line);
+  moveEmplace!Impl(i, *newAA);
+  
+  return newAA;
+}
+
 /** Allocate associative array data.
  * Called for `new SomeAA` expression.
  * Params:
@@ -514,7 +528,7 @@ pure nothrow @nogc unittest
  */
 extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
 {
-    return new Impl(ti, INIT_NUM_BUCKETS, file, line);
+  return newImpl(ti, INIT_NUM_BUCKETS, file, line);
 }
 
 /// Determine number of entries in associative array.
@@ -565,7 +579,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     AA aa = *paa;
     if (aa is null)
     {
-        aa = new Impl(ti, INIT_NUM_BUCKETS, file, line);
+        aa = newImpl(ti, INIT_NUM_BUCKETS, file, line);
         *paa = aa;
     }
 
@@ -791,7 +805,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
     if (!length)
         return null;
 
-    auto aa = new Impl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
+    auto aa = newImpl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
 
     void* pkey = keys.ptr;
     void* pval = vals.ptr;

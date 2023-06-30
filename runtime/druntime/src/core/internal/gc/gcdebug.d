@@ -9,16 +9,23 @@ extern(C) struct DebugInfo
 {
 
   pure static DebugInfo alloc(string file, uint line, size_t size,
-                         in TypeInfo ti) nothrow @nogc
+                         in string ti) nothrow @nogc
   {
     DebugInfo di;
     di.filename = file;
     di.line = line;
     di.size = size;
-    di.dataType = typeInfoToStr(ti);
+    di.dataType = ti;
     di.typeOfAllocation = TypeOfAllocation._alloc;
 
     return di;
+
+  }
+
+  pure static DebugInfo alloc(string file, uint line, size_t size,
+                         in TypeInfo ti) nothrow @nogc
+  {
+    return DebugInfo.alloc(file, line, size, typeInfoToStr(ti));
   }
 
   pure static DebugInfo realloc(string file, uint line, size_t size,
@@ -82,7 +89,7 @@ extern(C) struct DebugInfo
       verbose_printf(treshold, " '%s' (%lu bytes)", dataType.ptr, size);
       break;
     case _realloc:
-      verbose_printf(treshold, "alloc");
+      verbose_printf(treshold, "realloc");
       verbose_printf(treshold, " '%s' (%lu bytes)", dataType.ptr, size);
       break;
     case _array:
