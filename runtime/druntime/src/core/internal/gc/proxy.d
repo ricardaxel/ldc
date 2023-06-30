@@ -13,6 +13,8 @@ import core.gc.gcinterface;
 import core.gc.registry : createGCInstance;
 import core.stdc.stdio;
 
+import core.internal.gc.gcdebug : DebugInfo;
+
 static import core.memory;
 
 private
@@ -161,10 +163,9 @@ extern (C)
     }
 
     void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                     in string file = __FILE__, int line = __LINE__, 
-                     string additionalInfo = "") nothrow
+                      DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.malloc(sz, ba, ti, file, line, additionalInfo);
+        return instance.malloc(sz, ba, ti, di);
     }
 
     BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,

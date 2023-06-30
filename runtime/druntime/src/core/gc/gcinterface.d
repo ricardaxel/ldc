@@ -13,6 +13,8 @@
  */
 module core.gc.gcinterface;
 
+import core.internal.gc.gcdebug: DebugInfo;
+
 static import core.memory;
 alias BlkAttr = core.memory.GC.BlkAttr;
 alias BlkInfo = core.memory.GC.BlkInfo;
@@ -82,8 +84,7 @@ interface GC
      *
      */
     void* malloc(size_t size, uint bits, const TypeInfo ti,
-                 string file, int line, string additionalInfo) nothrow;
-
+                 DebugInfo di = DebugInfo.init) nothrow;
     /*
      *
      */

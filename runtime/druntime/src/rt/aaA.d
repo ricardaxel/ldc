@@ -13,6 +13,7 @@ extern (C) immutable int _aaVersion = 1;
 
 import core.memory : GC;
 import core.internal.util.math : min, max;
+import core.internal.gc.gcdebug;
 
 // grow threshold
 private enum GROW_NUM = 4;
@@ -231,7 +232,7 @@ private void* allocEntry(scope const Impl* aa, scope const void* pkey,
     else
     {
         auto flags = (aa.flags & Impl.Flags.hasPointers) ? 0 : GC.BlkAttr.NO_SCAN;
-        res = GC.malloc(akeysz + aa.valsz, flags, null, file, line, "AA new entry");
+        res = GC.malloc(akeysz + aa.valsz, flags, null, DebugInfo.alloc(file, line, akeysz + aa.valsz, typeid(aa)));
     }
 
     memcpy(res, pkey, aa.keysz); // copy key
@@ -301,7 +302,8 @@ TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo va
 
     // save kti and vti after type info for struct
     enum sizeti = __traits(classInstanceSize, TypeInfo_Struct);
-    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void), file, line);
+    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void), 
+                        DebugInfo.alloc(file, line, sizeti + (2 + rtisize) * (void*).sizeof, typeid(void)));
     import core.stdc.string : memcpy;
 
     memcpy(p, __traits(initSymbol, TypeInfo_Struct).ptr, sizeti);

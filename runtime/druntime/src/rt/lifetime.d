@@ -17,6 +17,8 @@ import core.memory;
 debug(PRINTF) import core.stdc.stdio;
 static import rt.tlsgc;
 
+import core.internal.gc.gcdebug;
+
 alias BlkInfo = GC.BlkInfo;
 alias BlkAttr = GC.BlkAttr;
 
@@ -65,7 +67,7 @@ Returns: pointer to `sz` bytes of free, uninitialized memory, managed by the GC.
 */
 extern (C) void* _d_allocmemory(size_t sz, string file, uint line, string capturedVars) @weak
 {
-    return GC.malloc(sz, 0, null, file, line, capturedVars);
+    return GC.malloc(sz, 0, null, DebugInfo.captureData(file, line, sz, capturedVars));
 }
 
 
@@ -77,7 +79,8 @@ version (LDC)
  */
 extern (C) void* _d_allocmemoryT(TypeInfo ti, string file, uint line) @weak
 {
-    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0, ti, file, line);
+    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0, ti, 
+                     DebugInfo.alloc(file, line, ti.tsize(), ti));
 }
 
 } // version (LDC)
@@ -127,7 +130,7 @@ private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci,
             attr |= BlkAttr.FINALIZE;
         if (ci.m_flags & TypeInfo_Class.ClassFlags.noPointers)
             attr |= BlkAttr.NO_SCAN;
-        p = GC.malloc(init.length, attr, ci, filename, line);
+        p = GC.malloc(init.length, attr, ci, DebugInfo.alloc(filename, line, init.length, ci));
         debug(PRINTF) printf(" p = %p\n", p);
     }
 

@@ -4,6 +4,7 @@ module core.internal.gc.impl.proto.gc;
 import core.gc.gcinterface;
 
 import core.internal.container.array;
+import core.internal.gc.gcdebug;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
 static import core.memory;
@@ -18,7 +19,7 @@ private
     extern (C) void gc_enable() nothrow;
     extern (C) void gc_disable() nothrow;
 
-    extern (C) void*    gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0, string additionalInfo = "" ) pure nothrow;
+    extern (C) void*    gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo = null, DebugInfo di = DebugInfo.init) pure nothrow;
     extern (C) void*    gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0, string additionalInfo = "" ) pure nothrow;
     extern (C) BlkInfo  gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo = null, string file = "", int line = 0) pure nothrow;
     extern (C) void*    gc_realloc(return scope void* p, size_t sz, uint ba = 0, const scope TypeInfo = null ) pure nothrow;
@@ -100,10 +101,10 @@ class ProtoGC : GC
     }
 
     void* malloc(size_t size, uint bits, const scope TypeInfo ti, 
-                 string file, int line, string additionalInfo) nothrow
+                 DebugInfo di) nothrow
     {
         .gc_init_nothrow();
-        return .gc_malloc(size, bits, ti, file, line, additionalInfo);
+        return .gc_malloc(size, bits, ti, di);
     }
 
     BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti,

@@ -24,6 +24,7 @@ import core.gc.gcinterface;
 import core.internal.container.array;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
+import core.internal.gc.gcdebug;
 static import core.memory;
 
 extern (C) void onOutOfMemoryError(void* pretend_sideffect = null) @trusted pure nothrow @nogc; /* dmd @@@BUG11461@@@ */
@@ -102,7 +103,7 @@ class ManualGC : GC
         return 0;
     }
 
-    void* malloc(size_t size, uint bits, const TypeInfo ti, string, int, string) nothrow
+    void* malloc(size_t size, uint bits, const TypeInfo ti, DebugInfo) nothrow
     {
         void* p = cstdlib.malloc(size);
 
@@ -114,7 +115,7 @@ class ManualGC : GC
     BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti, string, int) nothrow
     {
         BlkInfo retval;
-        retval.base = malloc(size, bits, ti, "", 0, "");
+        retval.base = malloc(size, bits, ti, DebugInfo.init);
         retval.size = size;
         retval.attr = bits;
         return retval;

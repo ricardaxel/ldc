@@ -40,6 +40,7 @@ import core.gc.gcinterface;
 import core.internal.container.treap;
 import core.internal.spinlock;
 import core.internal.gc.pooltable;
+import core.internal.gc.gcdebug;
 import core.internal.gc.impl.conservative.nogc_collection;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
@@ -151,55 +152,6 @@ private GC initialize_precise()
 {
     ConservativeGC.isPrecise = true;
     return initialize();
-}
-
-struct DebugInfo
-{
-  string filename;
-  uint line;
-  size_t size;
-  string type;
-
-  bool isLambda;
-  string capturedData;
-
-  uint age; // gains one year per collection
-
-  void setupDescription() nothrow @nogc
-  {
-    if(!stringDescr)
-    {
-      if(filename.length > int.max)
-        filename.length = 0;
-
-      stringDescr = cast(char*)malloc(char.sizeof);
-
-      int s = snprintf(stringDescr, 1, "%s (%s:%d; %lu bytes)", 
-          isLambda ? capturedData.ptr : type.ptr, filename.ptr, 
-          line, size);
-
-      stringDescr = cast(char*)realloc(stringDescr, s * char.sizeof);
-      snprintf(stringDescr, s, "%s (%s:%d; %lu bytes)", 
-          isLambda ? capturedData.ptr : type.ptr, filename.ptr, 
-          line, size);
-    }
-  }
-
-  void destroyDescr() nothrow @nogc
-  {
-    if(stringDescr)
-      free(stringDescr);
-  }
-
-  const(char*) toStringz() nothrow @nogc const
-  {
-    assert(stringDescr);
-    return stringDescr;
-  }
-
-  private:
-    char* stringDescr;
-
 }
 
 class ConservativeGC : GC
@@ -523,7 +475,7 @@ class ConservativeGC : GC
      *  OutOfMemoryError on allocation failure
      */
     void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
-                 in string file = "", int line = 0, string additionalInfo = "")
+                 DebugInfo di = DebugInfo.init)
     nothrow
     {
         if (!size)
@@ -533,7 +485,7 @@ class ConservativeGC : GC
 
         size_t localAllocSize = void;
 
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line, additionalInfo);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, di);
 
         if (!(bits & BlkAttr.NO_SCAN))
         {
@@ -548,7 +500,19 @@ class ConservativeGC : GC
     // Implementation for malloc and calloc.
     //
     private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
-                               in string file = "", int line = 0, in string additionalInfo = "") nothrow
+                               in string file = "", uint line = 0, string additionalInfo = "") nothrow
+    {
+      DebugInfo di;
+      if(additionalInfo.length == 0)
+        di = DebugInfo.alloc(file, line, size, ti);
+      else
+        di = DebugInfo.captureData(file, line, size, additionalInfo);
+
+      return mallocNoSync(size, bits, alloc_size, ti, di);
+    }
+
+    private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
+                               DebugInfo di = DebugInfo.init) nothrow
     {
         assert(size != 0);
 
@@ -558,7 +522,7 @@ class ConservativeGC : GC
         assert(gcx);
         //debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
 
-        auto p = gcx.alloc(size + SENTINEL_EXTRA, alloc_size, bits, ti, file, line);
+        auto p = gcx.alloc(size + SENTINEL_EXTRA, alloc_size, bits, ti, di.filename, di.line);
         if (!p)
             onOutOfMemoryErrorNoGC();
 
@@ -573,17 +537,8 @@ class ConservativeGC : GC
 
         if(config.verbose >= 2)
         {
-          auto d = DebugInfo(file, line, size, debugTypeName(ti), 
-                             additionalInfo.length != 0, additionalInfo);
-          d.setupDescription();
-          gcx.allocatedObj.insert(p, d);
-
-          verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
-          if(d.isLambda)
-            verbose_printf(2, "captured '%s' (%lu bytes)", d.capturedData.ptr, size);
-          else
-            verbose_printf(2, "new '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
-          verbose_printf(2, " => p = %p\n", p);
+          gcx.allocatedObj.insert(p, di);
+          di.printAllocation(p);
         }
 
         debug(PRINTF) printf("  => p = %p\n", p);
@@ -699,7 +654,7 @@ class ConservativeGC : GC
             return null;
         }
         if (!p)
-            return mallocNoSync(size, bits, alloc_size, ti);
+            return mallocNoSync(size, bits, alloc_size, ti, DebugInfo.init);
 
         debug(PRINTF) printf("GC::realloc(p = %p, size = %llu)\n", p, cast(ulong)size);
 
@@ -727,7 +682,7 @@ class ConservativeGC : GC
             if (!bits)
                 bits = pool.getBits(biti);
 
-            void* p2 = mallocNoSync(size, bits, alloc_size, ti);
+            void* p2 = mallocNoSync(size, bits, alloc_size, ti, DebugInfo.init);
             debug (SENTINEL)
                 psize = sentinel_size(q, psize);
             if (psize < size)
@@ -823,14 +778,12 @@ class ConservativeGC : GC
           auto file = "ReallocNoSync";
           auto line = __LINE__;
 
-          auto d = DebugInfo(file, line, size, debugTypeName(ti));
-          d.setupDescription();
+          auto d = DebugInfo.realloc(file, line, size, ti);
           gcx.allocatedObj.insert(p, d);
 
-          verbose_printf(2, "[%.*s:%d] ", file.length, file.ptr, line);
-          verbose_printf(2, "realloc '%s' (%lu bytes)", debugTypeName(ti).ptr, size);
-          verbose_printf(2, " => p = %p\n", p);
+          d.printAllocation(p);
         }
+
         return p;
     }
 
@@ -2446,9 +2399,7 @@ struct Gcx
                     if(config.verbose >= 3)
                     {
                       auto debugInfo = allocatedObj[p - (offset - baseOffset(offset, cast(Bins)bin))];
-                      verbose_printf(3, "\t\tmarking %s (%p)\n", debugInfo.toStringz(), p);
-                      verbose_printf(3, "\t\t--> p belongs to pool [%p .. %p]\n", pool.baseAddr, pool.topAddr);
-                      verbose_printf(3, "\t\t--> SmallAlloc : Bin #%u\n", cast(ubyte)bin);
+                      debugInfo.printMarking(p, pool.baseAddr, pool.topAddr, bin);
                     }
 
                     // We don't care abou setting pointsToBase correctly
@@ -2880,10 +2831,7 @@ struct Gcx
                                     if(config.verbose >= 2)
                                     {
                                       auto debugInfo = allocatedObj[p];
-                                      verbose_printf(2, "\tFreeing %s (%p). AGE :  %u/%u \n", 
-                                          debugInfo.toStringz, p, debugInfo.age,
-                                          numCollections + 1);
-                                      debugInfo.destroyDescr();
+                                      debugInfo.printFreeing(p);
                                       allocatedObj.remove(p);
                                     }
 
@@ -2921,7 +2869,7 @@ struct Gcx
 
                 if(config.verbose >= 2)
                   foreach(_, ref debugInfo; allocatedObj)
-                    debugInfo.age++;
+                    debugInfo.incrementAge();
             }
         }
 
@@ -5197,17 +5145,4 @@ unittest
         // adjacent allocations likely but not guaranteed
         printf("unexpected pointers %p and %p\n", p.ptr, q.ptr);
     }
-}
-
-/* ============================ VERBOSE PRINTF =============================== */
-
-extern(C) void verbose_printf(uint treshold, scope const char* format, scope const ...) @system nothrow @nogc
-{
-  if(config.verbose >= treshold)
-  {
-    va_list args;
-    va_start (args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-  }
 }
