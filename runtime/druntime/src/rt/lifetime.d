@@ -75,9 +75,9 @@ version (LDC)
 /**
  * for allocating a single POD value
  */
-extern (C) void* _d_allocmemoryT(TypeInfo ti) @weak
+extern (C) void* _d_allocmemoryT(TypeInfo ti, string file, uint line) @weak
 {
-    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0);
+    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0, ti, file, line);
 }
 
 } // version (LDC)

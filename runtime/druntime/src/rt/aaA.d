@@ -80,7 +80,7 @@ private:
         if ((ti.key.flags | ti.value.flags) & 1)
             flags |= Flags.hasPointers;
 
-        entryTI = fakeEntryTI(this, ti.key, ti.value);
+        entryTI = fakeEntryTI(this, ti.key, ti.value, file, line);
     }
 
     Bucket[] buckets;
@@ -270,7 +270,8 @@ private immutable(void)* getRTInfo(const TypeInfo ti) pure nothrow
 }
 
 // build type info for Entry with additional key and value fields
-TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo valti) nothrow
+TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo valti,
+                            string file, uint line) nothrow
 {
     import rt.lifetime : unqualify;
 
@@ -300,7 +301,7 @@ TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo va
 
     // save kti and vti after type info for struct
     enum sizeti = __traits(classInstanceSize, TypeInfo_Struct);
-    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof);
+    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void), file, line);
     import core.stdc.string : memcpy;
 
     memcpy(p, __traits(initSymbol, TypeInfo_Struct).ptr, sizeti);
