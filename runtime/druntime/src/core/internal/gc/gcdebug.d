@@ -201,6 +201,8 @@ pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
       return "rt.aaA.Impl";
     else if(name == "S2rt3aaA6Bucket")
       return "rt.aaA.Bucket";
+    else if(name == "S2rt3aaA__T5EntryZ")
+      return "AA Entry";
 
     // see typeinfo.d
     // TODO mixin version ? 
