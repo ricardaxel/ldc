@@ -494,7 +494,7 @@ extern(C):
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
         pragma(mangle, "gc_qalloc") static BlkInfo qalloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-            string file = __FILE__, int line = __LINE__) pure nothrow;
+            DebugInfo di = DebugInfo.init) pure nothrow;
 
 
     /**
@@ -523,8 +523,7 @@ extern(C):
             string file = __FILE__, int line = __LINE__, string func = __FUNCTION__) pure nothrow;
     else
         pragma(mangle, "gc_calloc") static void* calloc(size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-            string file = __FILE__, int line = __LINE__, string additionalInfo = "") pure nothrow;
-
+            DebugInfo di = DebugInfo.init) pure nothrow;
 
     /**
      * Extend, shrink or allocate a new block of memory keeping the contents of

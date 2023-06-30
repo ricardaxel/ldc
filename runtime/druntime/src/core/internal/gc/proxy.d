@@ -169,16 +169,15 @@ extern (C)
     }
 
     BlkInfo gc_qalloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                       in string file = __FILE__, int line = __LINE__) nothrow
+                      DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.qalloc( sz, ba, ti, file, line );
+        return instance.qalloc( sz, ba, ti, di );
     }
 
     void* gc_calloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                     in string file = __FILE__, int line = __LINE__, 
-                     string additionalInfo = "") nothrow
+                     DebugInfo di = DebugInfo.init) nothrow
     {
-        return instance.calloc( sz, ba, ti, file, line, additionalInfo );
+        return instance.calloc( sz, ba, ti, di );
     }
 
     void* gc_realloc( void* p, size_t sz, uint ba = 0, const scope TypeInfo ti = null ) nothrow

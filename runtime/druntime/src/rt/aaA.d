@@ -212,7 +212,7 @@ Bucket[] allocBuckets(size_t dim, string file, uint line) @trusted pure nothrow
 {
     enum attr = GC.BlkAttr.NO_INTERIOR;
     immutable sz = dim * Bucket.sizeof;
-    return (cast(Bucket*) GC.calloc(sz, attr, null, file, line, "Alloc AA Bucket"))[0 .. dim];
+    return (cast(Bucket*) GC.calloc(sz, attr, null, DebugInfo.alloc(file, line, sz, typeid(Bucket))))[0 .. dim];
 }
 
 //==============================================================================

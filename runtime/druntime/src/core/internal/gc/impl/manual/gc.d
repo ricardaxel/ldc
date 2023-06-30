@@ -112,16 +112,16 @@ class ManualGC : GC
         return p;
     }
 
-    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti, string, int) nothrow
+    BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti, DebugInfo di) nothrow
     {
         BlkInfo retval;
-        retval.base = malloc(size, bits, ti, DebugInfo.init);
+        retval.base = malloc(size, bits, ti, di);
         retval.size = size;
         retval.attr = bits;
         return retval;
     }
 
-    void* calloc(size_t size, uint bits, const TypeInfo ti, string, int, string) nothrow
+    void* calloc(size_t size, uint bits, const TypeInfo ti, DebugInfo) nothrow
     {
         void* p = cstdlib.calloc(1, size);
 

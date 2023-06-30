@@ -89,13 +89,13 @@ interface GC
      *
      */
     BlkInfo qalloc(size_t size, uint bits, const TypeInfo ti,
-                   string file, int line) nothrow;
+                   DebugInfo di = DebugInfo.init) nothrow;
 
     /*
      *
      */
     void* calloc(size_t size, uint bits, const TypeInfo ti,
-                 string file, int line, string additionalInfo) nothrow;
+                 DebugInfo di = DebugInfo.init) nothrow;
 
     /*
      *

@@ -500,18 +500,6 @@ class ConservativeGC : GC
     // Implementation for malloc and calloc.
     //
     private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
-                               in string file = "", uint line = 0, string additionalInfo = "") nothrow
-    {
-      DebugInfo di;
-      if(additionalInfo.length == 0)
-        di = DebugInfo.alloc(file, line, size, ti);
-      else
-        di = DebugInfo.captureData(file, line, size, additionalInfo);
-
-      return mallocNoSync(size, bits, alloc_size, ti, di);
-    }
-
-    private void *mallocNoSync(size_t size, uint bits, ref size_t alloc_size, const TypeInfo ti = null,
                                DebugInfo di = DebugInfo.init) nothrow
     {
         assert(size != 0);
@@ -546,7 +534,7 @@ class ConservativeGC : GC
     }
 
     BlkInfo qalloc(size_t size, uint bits, const scope TypeInfo ti,
-                   in string file = "", int line = 0) nothrow
+                   DebugInfo di = DebugInfo.init) nothrow
     {
 
         if (!size)
@@ -556,7 +544,7 @@ class ConservativeGC : GC
 
         BlkInfo retval;
 
-        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti, file, line);
+        retval.base = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, retval.size, ti, di);
 
         if (!(bits & BlkAttr.NO_SCAN))
         {
@@ -584,7 +572,7 @@ class ConservativeGC : GC
      *  OutOfMemoryError on allocation failure.
      */
     void *calloc(size_t size, uint bits = 0, const TypeInfo ti = null,
-                 in string file = "", int line = 0, in string additionalInfo = "") nothrow
+                   DebugInfo di = DebugInfo.init) nothrow
     {
         if (!size)
         {
@@ -592,7 +580,7 @@ class ConservativeGC : GC
         }
 
         size_t localAllocSize = void;
-        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, file, line, additionalInfo);
+        auto p = runLocked!(mallocNoSync, mallocTime, numMallocs)(size, bits, localAllocSize, ti, di);
 
         memset(p, 0, size);
         if (!(bits & BlkAttr.NO_SCAN))

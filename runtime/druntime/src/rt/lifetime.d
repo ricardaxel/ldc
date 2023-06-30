@@ -486,7 +486,7 @@ private BlkInfo __arrayAlloc(size_t arrsize, const scope TypeInfo ti, const Type
     if (typeInfoSize)
         attr |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto bi = GC.qalloc(padded_size, attr, tinext, file, line);
+    auto bi = GC.qalloc(padded_size, attr, tinext, DebugInfo.arrayAlloc(file, line, padded_size, tinext));
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
@@ -507,7 +507,8 @@ private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeI
         return BlkInfo();
     }
 
-    auto bi = GC.qalloc(padded_size, info.attr, tinext, file, line);
+    auto bi = GC.qalloc(padded_size, info.attr, tinext, 
+                        DebugInfo.arrayAlloc(file, line, padded_size, tinext));
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
 }
@@ -1230,7 +1231,8 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) p
     if (tiSize)
         flags |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto blkInf = GC.qalloc(size, flags, ti, file, line);
+    auto blkInf = GC.qalloc(size, flags, ti, 
+                            DebugInfo.alloc(file, line, size, ti));
     auto p = blkInf.base;
 
     if (tiSize)

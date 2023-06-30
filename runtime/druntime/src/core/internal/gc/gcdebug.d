@@ -8,7 +8,7 @@ public:
 extern(C) struct DebugInfo
 {
 
-  static DebugInfo alloc(string file, uint line, size_t size,
+  pure static DebugInfo alloc(string file, uint line, size_t size,
                          in TypeInfo ti) nothrow @nogc
   {
     DebugInfo di;
@@ -21,7 +21,7 @@ extern(C) struct DebugInfo
     return di;
   }
 
-  static DebugInfo realloc(string file, uint line, size_t size,
+  pure static DebugInfo realloc(string file, uint line, size_t size,
                            in TypeInfo ti) nothrow @nogc
   {
     DebugInfo di;
@@ -30,6 +30,19 @@ extern(C) struct DebugInfo
     di.size = size;
     di.dataType = typeInfoToStr(ti);
     di.typeOfAllocation = TypeOfAllocation._realloc;
+
+    return di;
+  }
+
+  pure static DebugInfo arrayAlloc(string file, uint line, size_t size,
+                              in TypeInfo ti) nothrow @nogc
+  {
+    DebugInfo di;
+    di.filename = file;
+    di.line = line;
+    di.size = size;
+    di.dataType = typeInfoToStr(ti);
+    di.typeOfAllocation = TypeOfAllocation._array;
 
     return di;
   }
@@ -158,7 +171,7 @@ extern(C) void verbose_printf(uint treshold, scope const char* format, scope con
   }
 }
 
-string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
+pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
 {
     string name;
     if (ti is null)
@@ -179,6 +192,8 @@ string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
     // special cases
     if(name == "S2rt3aaA4Impl")
       return "rt.aaA.Impl";
+    else if(name == "S2rt3aaA6Bucket")
+      return "rt.aaA.Bucket";
 
     // see typeinfo.d
     // TODO mixin version ? 
