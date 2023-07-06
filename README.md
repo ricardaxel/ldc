@@ -243,7 +243,7 @@ void main()
 }
 
 
-╰─> ldc2 -g -O0 test3.d --disable-gc2stack --disable-d-passes --of test3.d
+╰─> ldc2 -g -O0 test3.d --disable-gc2stack --disable-d-passes --of test3
 
 ╰─> ./test3 "--DRT-gcopt=cleanup:collect fork:0 parallel:0 verbose:2" 
 [test3.d:6] captured '[a]' (4 bytes) => p = 0x7f02638fe000
