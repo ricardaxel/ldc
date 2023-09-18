@@ -10,6 +10,7 @@ module core.internal.container.hashtab;
 import core.internal.container.array;
 static import common = core.internal.container.common;
 
+@nogc
 struct HashTab(Key, Value)
 {
     static struct Node
@@ -106,6 +107,23 @@ struct HashTab(Key, Value)
     }
 
     int opApply(scope int delegate(ref Key, ref Value) dg)
+    {
+        immutable save = _inOpApply;
+        _inOpApply = true;
+        scope (exit) _inOpApply = save;
+        foreach (p; _buckets)
+        {
+            while (p !is null)
+            {
+                if (auto res = dg(p._key, p._value))
+                    return res;
+                p = p._next;
+            }
+        }
+        return 0;
+    }
+
+    int opApply(scope int delegate(ref Key, ref Value) nothrow dg) nothrow
     {
         immutable save = _inOpApply;
         _inOpApply = true;

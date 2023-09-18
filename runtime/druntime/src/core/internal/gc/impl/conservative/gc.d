@@ -525,7 +525,7 @@ class ConservativeGC : GC
 
         if(config.verbose >= 2)
         {
-          gcx.allocatedObj.insert(p, di);
+          gcx.allocatedObj[p] = di;
           di.printAllocation(p);
         }
 
@@ -767,7 +767,7 @@ class ConservativeGC : GC
           auto line = __LINE__;
 
           auto d = DebugInfo.realloc(file, line, size, ti);
-          gcx.allocatedObj.insert(p, d);
+          gcx.allocatedObj[p] = d;
 
           d.printAllocation(p);
         }
@@ -1517,7 +1517,10 @@ private void set(ref PageBits bits, size_t i) @nogc pure nothrow
 
 struct Gcx
 {
-    NoGCAssociativeArray!(void*, DebugInfo) allocatedObj;
+    import core.internal.container.hashtab: HashTab;
+    alias NoGCHashTab(K, V) = HashTab!(K, V);
+
+    NoGCHashTab!(void*, DebugInfo) allocatedObj;
 
     auto rootsLock = shared(AlignedSpinLock)(SpinLock.Contention.brief);
     auto rangesLock = shared(AlignedSpinLock)(SpinLock.Contention.brief);
