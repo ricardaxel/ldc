@@ -41,7 +41,6 @@ import core.internal.container.treap;
 import core.internal.spinlock;
 import core.internal.gc.pooltable;
 import core.internal.gc.gcdebug;
-import core.internal.gc.impl.conservative.nogc_collection;
 
 import cstdlib = core.stdc.stdlib : calloc, free, malloc, realloc;
 import core.stdc.string : memcpy, memset, memmove, strcmp;
