@@ -79,7 +79,7 @@ version (LDC)
  */
 extern (C) void* _d_allocmemoryT(TypeInfo ti, string file, uint line) @weak
 {
-    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0, ti, 
+    return GC.malloc(ti.tsize(), !(ti.flags() & 1) ? BlkAttr.NO_SCAN : 0, ti,
                      DebugInfo.alloc(file, line, ti.tsize(), ti));
 }
 
@@ -101,7 +101,7 @@ Returns: newly created object
 */
 // adapted for LDC
 pragma(inline, true)
-private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci, 
+private extern (D) Object _d_newclass(bool initialize)(const ClassInfo ci,
   in string filename = "", int line = 0)
 {
     import core.stdc.stdlib;
@@ -507,7 +507,7 @@ private BlkInfo __arrayAlloc(size_t arrsize, ref BlkInfo info, const scope TypeI
         return BlkInfo();
     }
 
-    auto bi = GC.qalloc(padded_size, info.attr, tinext, 
+    auto bi = GC.qalloc(padded_size, info.attr, tinext,
                         DebugInfo.arrayAlloc(file, line, padded_size, tinext));
     __arrayClearPad(bi, arrsize, padsize);
     return bi;
@@ -998,7 +998,7 @@ Params:
     length = `.length` of resulting array
 Returns: newly allocated array
 */
-extern (C) void[] _d_newarrayU(const scope TypeInfo ti, size_t length, 
+extern (C) void[] _d_newarrayU(const scope TypeInfo ti, size_t length,
                                string file, uint line) pure nothrow @weak
 {
     import core.exception : onOutOfMemoryError;
@@ -1231,7 +1231,7 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) p
     if (tiSize)
         flags |= BlkAttr.STRUCTFINAL | BlkAttr.FINALIZE;
 
-    auto blkInf = GC.qalloc(size, flags, ti, 
+    auto blkInf = GC.qalloc(size, flags, ti,
                             DebugInfo.alloc(file, line, size, ti));
     auto p = blkInf.base;
 
@@ -1730,7 +1730,7 @@ do
 }
 
 /// ditto
-extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p, 
+extern (C) void[] _d_arraysetlengthiT(const TypeInfo ti, size_t newlength, void[]* p,
                                       string file, uint line) @weak
 in
 {
@@ -2304,7 +2304,7 @@ Params:
 Returns:
     resulting concatenated array, with `.length` equal to new element length despite `byte` type
 */
-extern (C) byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y) @weak
+extern (C) byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y, uint line, string file) @weak
 out (result)
 {
     auto tinext = unqualify(ti.next);
@@ -2353,7 +2353,7 @@ do
     if (!len)
         return null;
 
-    auto info = __arrayAlloc(len, ti, tinext, "_d_arraycatT: TODO", 0);
+    auto info = __arrayAlloc(len, ti, tinext, file, line);
     byte* p = cast(byte*)__arrayStart(info);
     p[len] = 0; // guessing this is to optimize for null-terminated arrays?
     memcpy(p, x.ptr, xlen);
@@ -2389,7 +2389,7 @@ Params:
 Returns:
     newly created concatenated array, `.length` equal to the total element length despite `void` type
 */
-extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs) @weak
+extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs, uint line, string file) @weak
 {
     import core.stdc.string;
 
@@ -2404,7 +2404,7 @@ extern (C) void[] _d_arraycatnTX(const TypeInfo ti, scope byte[][] arrs) @weak
         return null;
 
     auto allocsize = length * size;
-    auto info = __arrayAlloc(allocsize, ti, tinext, "_d_arraycatnTX: TODO", 0);
+    auto info = __arrayAlloc(allocsize, ti, tinext, file, line);
     auto isshared = typeid(ti) is typeid(TypeInfo_Shared);
     __setArrayAllocLength(info, allocsize, isshared, tinext);
     void *a = __arrayStart (info);

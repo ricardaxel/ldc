@@ -613,13 +613,13 @@ static void buildRuntimeModule() {
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arrayappendcd", "_d_arrayappendwd"},
                 {voidArrayTy, dcharTy,  stringTy, uintTy}, {STCref, 0});
 
-  // byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y, string file, uint line)
+  // byte[] _d_arraycatT(const TypeInfo ti, byte[] x, byte[] y, uint line, string file)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arraycatT"},
-                {typeInfoTy, voidArrayTy, voidArrayTy, /*stringTy, uintTy*/}, {STCconst, 0, 0});
+                {typeInfoTy, voidArrayTy, voidArrayTy, uintTy, stringTy}, {STCconst, 0, 0});
 
-  // void[] _d_arraycatnTX(const TypeInfo ti, byte[][] arrs, string file, uint line)
+  // void[] _d_arraycatnTX(const TypeInfo ti, byte[][] arrs, uint line, string file)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arraycatnTX"},
-                {typeInfoTy, voidArrayTy->arrayOf(), /*stringTy, uintTy*/}, {STCconst, 0});
+                {typeInfoTy, voidArrayTy->arrayOf(), uintTy, stringTy}, {STCconst, 0});
 
   // Object _d_newclass(const ClassInfo ci)
   createFwdDecl(LINK::c, objectTy, {"_d_newclass"},

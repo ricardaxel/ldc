@@ -893,10 +893,10 @@ DSliceValue *DtoCatArrays(const Loc &loc, Type *arrayType, Expression *exp1,
     args.push_back(loadArray(exp2,2));
   }
 
-  /* // file */
-  /* args.push_back(DtoConstString(loc.filename)); */
-  /* // line */
-  /* args.push_back(DtoConstUint(loc.linnum)); */
+  // line
+  args.push_back(DtoConstUint(loc.linnum));
+  // file
+  args.push_back(DtoConstString(loc.filename));
 
   auto newArray = gIR->CreateCallOrInvoke(fn, args, ".appendedArray");
   return getSlice(arrayType, newArray);
