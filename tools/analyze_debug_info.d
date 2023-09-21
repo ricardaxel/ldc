@@ -1,4 +1,4 @@
-#!/opt/ldc2/bin/rdmd
+#!/usr/bin/env rdmd
 
 import std.array;
 import std.algorithm;
