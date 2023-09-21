@@ -9,6 +9,9 @@ import std.regex;
 import std.stdio;
 import std.utf;
 
+// 1 Kb
+enum SIZE_TRESHOLD = 1024;
+
 struct AllocInfo 
 {
   string location;
@@ -67,6 +70,7 @@ class AllocationRegistry
   {
     writeln(allocations.values
                .sort!((a, b) => a.totalSize > b.totalSize)
+               .filter!(a => a.totalSize >= SIZE_TRESHOLD)
                .map!(a => a.toString())
                .join("\n"));
   }
