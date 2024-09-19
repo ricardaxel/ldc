@@ -497,8 +497,8 @@ void DtoCreateNestedContext(FuncGenState &funcGen) {
           getRuntimeFunction(fd->loc, gIR->module, "_d_allocmemory");
       auto size = getTypeAllocSize(frameType);
 
-      auto file = DtoConstString(fd->loc.filename);
-      auto line = DtoConstUint(fd->loc.linnum);
+      auto file = DtoConstString(fd->loc.filename());
+      auto line = DtoConstUint(fd->loc.linnum());
       auto capturedVars = DtoConstString(fd->allocatedClosureVars().toChars());
       if (frameAlignment > 16) // GC guarantees an alignment of 16
         size += frameAlignment - 16;

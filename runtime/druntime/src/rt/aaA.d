@@ -307,7 +307,7 @@ TypeInfo_Struct fakeEntryTI(ref Impl aa, const TypeInfo keyti, const TypeInfo va
 
     // save kti and vti after type info for struct
     enum sizeti = __traits(classInstanceSize, TypeInfo_Struct);
-    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void), 
+    void* p = GC.malloc(sizeti + (2 + rtisize) * (void*).sizeof, 0, typeid(void),
                         DebugInfo.alloc(file, line, sizeti + (2 + rtisize) * (void*).sizeof, typeid(void)));
     import core.stdc.string : memcpy;
 
@@ -511,20 +511,6 @@ pure nothrow @nogc unittest
 // API Implementation
 //------------------------------------------------------------------------------
 
-// implementation of 
-// return new Impl(ti, INIT_NUM_BUCKETS, file, line);
-Impl* newImpl(const TypeInfo_AssociativeArray ti, ulong numBuckets, string file, uint line)
-{
-  import rt.lifetime:  _d_newitemT;
-  import core.lifetime:  moveEmplace;
-  Impl* newAA = cast(Impl*) _d_newitemT (typeid(Impl), file, line);
-
-  auto i = Impl(ti, numBuckets, file, line);
-  moveEmplace!Impl(i, *newAA);
-  
-  return newAA;
-}
-
 /** Allocate associative array data.
  * Called for `new SomeAA` expression.
  * Params:
@@ -534,7 +520,7 @@ Impl* newImpl(const TypeInfo_AssociativeArray ti, ulong numBuckets, string file,
  */
 extern (C) Impl* _aaNew(const TypeInfo_AssociativeArray ti, string file, uint line)
 {
-  return newImpl(ti, INIT_NUM_BUCKETS, file, line);
+  return new Impl(ti, INIT_NUM_BUCKETS, file, line);
 }
 
 /// Determine number of entries in associative array.
@@ -585,7 +571,7 @@ extern (C) void* _aaGetX(scope AA* paa, const TypeInfo_AssociativeArray ti,
     AA aa = *paa;
     if (aa is null)
     {
-        aa = newImpl(ti, INIT_NUM_BUCKETS, file, line);
+        aa = new Impl(ti, INIT_NUM_BUCKETS, file, line);
         *paa = aa;
     }
 
@@ -811,7 +797,7 @@ extern (C) Impl* _d_assocarrayliteralTX(const TypeInfo_AssociativeArray ti, void
     if (!length)
         return null;
 
-    auto aa = newImpl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
+    auto aa = new Impl(ti, nextpow2(INIT_DEN * length / INIT_NUM), file, line);
 
     void* pkey = keys.ptr;
     void* pval = vals.ptr;

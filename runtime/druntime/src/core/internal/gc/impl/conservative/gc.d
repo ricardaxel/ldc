@@ -1965,7 +1965,7 @@ struct Gcx
                 if (!newPool(1, false))
                 {
                     // out of memory => try to free some memory
-                    fullcollect(false, true, false, file, line); // stop the world
+                    fullcollect(false, true, file, line); // stop the world
                     if (lowMem)
                         minimize();
                     recoverNextPage(bin);
@@ -1973,7 +1973,7 @@ struct Gcx
             }
             else if (usedSmallPages > 0)
             {
-                fullcollect(false, false, false, file, line);
+                fullcollect(false, false, file, line);
                 if (lowMem)
                     minimize();
                 recoverNextPage(bin);
@@ -2297,15 +2297,9 @@ struct Gcx
         alias toscan = scanStack!precise;
 
         debug(MARK_PRINTF)
-<<<<<<< HEAD
             printf("marking range: [%p..%p] (%#llx)\n", rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
-||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
-            printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
-=======
-            printf("marking range: [%p..%p] (%#llx)\n", pbot, ptop, cast(long)(ptop - pbot));
-        verbose_printf(3, "\tmarking first range: [%p..%p] (%#llx)\n", 
+        verbose_printf(3, "\tmarking first range: [%p..%p] (%#llx)\n",
                           rng.pbot, rng.ptop, cast(long)(rng.ptop - rng.pbot));
->>>>>>> 0e3ae5391e (add verbose option that display some GC information)
 
         // limit the amount of ranges added to the toscan stack
         enum FANOUT_LIMIT = 32;
@@ -2593,26 +2587,10 @@ struct Gcx
     // collection step 2: mark roots and heap
     void markAll(alias markFn)() nothrow
     {
-<<<<<<< HEAD
+        verbose_printf(3, "\t============= MARKING ==============\n");
         debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
         // Scan stacks registers, and TLS for each paused thread
         thread_scanAll(&markFn);
-||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
-        if (!nostack)
-        {
-            debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
-            // Scan stacks and registers for each paused thread
-            thread_scanAll(&markFn);
-        }
-=======
-        verbose_printf(3, "\t============= MARKING ==============\n");
-        if (!nostack)
-        {
-            debug(COLLECT_PRINTF) printf("\tscan stacks.\n");
-            // Scan stacks and registers for each paused thread
-            thread_scanAll(&markFn);
-        }
->>>>>>> 0e3ae5391e (add verbose option that display some GC information)
 
         // Scan roots[]
         debug(COLLECT_PRINTF) printf("\tscan roots[]\n");
@@ -3080,14 +3058,8 @@ struct Gcx
      * Return number of full pages free'd.
      * The collection is done concurrently only if block and isFinal are false.
      */
-<<<<<<< HEAD
-    size_t fullcollect(bool block = false, bool isFinal = false) nothrow
-||||||| parent of 0e3ae5391e (add verbose option that display some GC information)
-    size_t fullcollect(bool nostack = false, bool block = false, bool isFinal = false) nothrow
-=======
-    size_t fullcollect(bool nostack = false, bool block = false, bool isFinal = false, 
+    size_t fullcollect(bool block = false, bool isFinal = false,
                        in string file = "", int line = 0) nothrow
->>>>>>> 0e3ae5391e (add verbose option that display some GC information)
     {
         // It is possible that `fullcollect` will be called from a thread which
         // is not yet registered in runtime (because allocating `new Thread` is

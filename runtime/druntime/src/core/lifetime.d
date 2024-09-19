@@ -2818,6 +2818,7 @@ T _d_newclassTTrace(T)(string file, int line, string funcname) @trusted
  * Returns:
  *     newly allocated item
  */
+// extern (C) void* _d_newitemT(const TypeInfo _ti, string file, uint line) pure nothrow @weak
 T* _d_newitemT(T)() @trusted
 {
     import core.internal.lifetime : emplaceInitializer;

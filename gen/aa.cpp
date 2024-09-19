@@ -68,8 +68,8 @@ DLValue *DtoAAIndex(const Loc &loc, Type *type, DValue *aa, DValue *key,
     args.push_back(aati);
     args.push_back(valsize);
     args.push_back(pkey);
-    args.push_back(DtoConstString(loc.filename));
-    args.push_back(DtoConstUint(loc.linnum));
+    args.push_back(DtoConstString(loc.filename()));
+    args.push_back(DtoConstUint(loc.linnum()));
 
     ret = gIR->CreateCallOrInvoke(func, args, "aa.index");
   } else {

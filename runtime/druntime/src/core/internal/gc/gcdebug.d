@@ -9,7 +9,7 @@ extern(C) struct DebugInfo
 {
 
   pure static DebugInfo alloc(string file, uint line, size_t size,
-                         in string ti) nothrow @nogc
+                         const string ti) nothrow @nogc
   {
     DebugInfo di;
     di.filename = file;
@@ -23,13 +23,13 @@ extern(C) struct DebugInfo
   }
 
   pure static DebugInfo alloc(string file, uint line, size_t size,
-                         in TypeInfo ti) nothrow @nogc
+                         const TypeInfo ti) nothrow @nogc
   {
     return DebugInfo.alloc(file, line, size, typeInfoToStr(ti));
   }
 
   pure static DebugInfo realloc(string file, uint line, size_t size,
-                           in TypeInfo ti) nothrow @nogc
+                           const TypeInfo ti) nothrow @nogc
   {
     DebugInfo di;
     di.filename = file;
@@ -42,7 +42,7 @@ extern(C) struct DebugInfo
   }
 
   pure static DebugInfo arrayAlloc(string file, uint line, size_t size,
-                              in TypeInfo ti) nothrow @nogc
+                              const TypeInfo ti) nothrow @nogc
   {
     DebugInfo di;
     di.filename = file;
@@ -59,9 +59,9 @@ extern(C) struct DebugInfo
   {
     DebugInfo di;
     di.filename = file;
-    di.line = line;   
-    di.size = size;  
-    di.capturedData = capturedData; 
+    di.line = line;
+    di.size = size;
+    di.capturedData = capturedData;
     di.typeOfAllocation = TypeOfAllocation._captureData;
 
     return di;
@@ -127,7 +127,7 @@ extern(C) struct DebugInfo
   }
 
 
-  void printDataDescription(in int treshold, void* p = null) nothrow @nogc
+  void printDataDescription(const int treshold, void* p = null) nothrow @nogc
   {
     final switch(typeOfAllocation) with(TypeOfAllocation)
     {
@@ -144,7 +144,7 @@ extern(C) struct DebugInfo
     }
 
     verbose_printf(treshold, " (%s:%d; %lu bytes)", filename.ptr, line, size);
-    
+
     if(p)
       verbose_printf(treshold, " (%p)", p);
   }
@@ -205,7 +205,7 @@ pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
       return "AA Entry";
 
     // see typeinfo.d
-    // TODO mixin version ? 
+    // TODO mixin version ?
     else if(name == "TypeInfo_i")
       return "int";
     else if(name == "TypeInfo_k")

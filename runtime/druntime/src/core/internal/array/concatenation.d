@@ -52,7 +52,7 @@ Tret _d_arraycatnTX(Tret, Tarr...)(auto ref Tarr froms) @trusted
     }
     else
     {
-        _d_arraysetlengthTImpl!(typeof(res))._d_arraysetlengthT(res, totalLen);
+        _d_arraysetlengthTImpl!(typeof(res))._d_arraysetlengthT(res, totalLen, "", 0); // TODO(gc-info)
     }
 
     /* Currently, if both a postblit and a cpctor are defined, the postblit is

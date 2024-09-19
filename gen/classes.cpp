@@ -97,10 +97,10 @@ DValue *DtoNewClass(const Loc &loc, TypeClass *tc, NewExp *newexp) {
     {
       llvm::Function *fn = getRuntimeFunction(loc, gIR->module, "_d_allocclass");
       LLConstant *ci = irClass->getClassInfoSymbol();
-      LLConstant* filename = DtoConstString(loc.filename);
-      llvm::ConstantInt* linNum = DtoConstUint(loc.linnum) ;
+      LLConstant* filename = DtoConstString(loc.filename());
+      llvm::ConstantInt* linNum = DtoConstUint(loc.linnum()) ;
 
-      mem = gIR->CreateCallOrInvoke(fn, ci, ".newclass_gc");
+      mem = gIR->CreateCallOrInvoke(fn, ci, filename, linNum, ".newclass_gc");
       doInit = true;
     }
   }

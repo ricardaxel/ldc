@@ -1607,8 +1607,8 @@ public:
     else if (auto taa = ntype->isTypeAArray()) {
       LLFunction *func = getRuntimeFunction(e->loc, gIR->module, "_aaNew");
       LLValue *aaTypeInfo = DtoTypeInfoOf(e->loc, stripModifiers(taa));
-      LLConstant* filename = DtoConstString(e->loc.filename);
-      llvm::ConstantInt* linNum = DtoConstUint(e->loc.linnum) ;
+      LLConstant* filename = DtoConstString(e->loc.filename());
+      llvm::ConstantInt* linNum = DtoConstUint(e->loc.linnum()) ;
       LLValue *aa = gIR->CreateCallOrInvoke(func, aaTypeInfo, filename, linNum, "aa");
       result = new DImValue(e->type, aa);
     }

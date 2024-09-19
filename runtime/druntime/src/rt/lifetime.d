@@ -1122,26 +1122,6 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti, string file, uint line) p
     return p;
 }
 
-/// ditto
-extern (C) void* _d_newitemT(in TypeInfo _ti, string file, uint line) pure nothrow @weak
-{
-    import core.stdc.string;
-    auto p = _d_newitemU(_ti, file, line);
-    memset(p, 0, _ti.tsize);
-    return p;
-}
-
-/// Same as above, for item with non-zero initializer.
-extern (C) void* _d_newitemiT(in TypeInfo _ti, string file, uint line) pure nothrow @weak
-{
-    import core.stdc.string;
-    auto p = _d_newitemU(_ti, file, line);
-    auto init = _ti.initializer();
-    assert(init.length <= _ti.tsize);
-    memcpy(p, init.ptr, init.length);
-    return p;
-}
-
 debug(PRINTF)
 {
     extern(C) void printArrayCache()
