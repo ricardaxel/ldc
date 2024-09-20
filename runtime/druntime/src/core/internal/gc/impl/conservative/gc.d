@@ -477,7 +477,7 @@ class ConservativeGC : GC
      *  OutOfMemoryError on allocation failure
      */
     void *malloc(size_t size, uint bits = 0, const TypeInfo ti = null,
-                 DebugInfo di = DebugInfo.init)
+                 DebugInfo di = DebugInfo.alloc(__FILE__, __LINE__, 0, ""))
     nothrow
     {
         if (!size)
@@ -1273,9 +1273,9 @@ class ConservativeGC : GC
     }
 
 
-    void collect() nothrow
+    void collect(string file = __FILE__, uint line = 0) nothrow
     {
-        fullCollect();
+        fullCollect(file, line);
     }
 
 
@@ -1285,17 +1285,17 @@ class ConservativeGC : GC
      * Returns:
      *  The number of pages freed.
      */
-    size_t fullCollect() nothrow
+    size_t fullCollect(string file, uint line) nothrow
     {
         debug(PRINTF) printf("GC.fullCollect()\n");
 
         // Since a finalizer could launch a new thread, we always need to lock
         // when collecting.
-        static size_t go(Gcx* gcx) nothrow
+        static size_t go(Gcx* gcx, string file, uint line) nothrow
         {
-            return gcx.fullcollect(false, true); // standard stop the world
+            return gcx.fullcollect(false, true, file, line); // standard stop the world
         }
-        immutable result = runLocked!go(gcx);
+        immutable result = runLocked!go(gcx, file, line);
 
         version (none)
         {
@@ -1929,7 +1929,7 @@ struct Gcx
                 in string file, int line) nothrow
     {
         return size <= PAGESIZE/2 ? smallAlloc(size, alloc_size, bits, ti, file, line)
-                                  : bigAlloc(size, alloc_size, bits, ti);
+                                  : bigAlloc(size, alloc_size, bits, ti, file, line);
     }
 
     void* smallAlloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti,
@@ -2013,7 +2013,8 @@ struct Gcx
      * Allocate a chunk of memory that is larger than a page.
      * Return null if out of memory.
      */
-    void* bigAlloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti = null) nothrow
+    void* bigAlloc(size_t size, ref size_t alloc_size, uint bits, const TypeInfo ti = null,
+                   string file = "", uint line = 0) nothrow
     {
         debug(PRINTF) printf("In bigAlloc.  Size:  %d\n", size);
 
@@ -2056,13 +2057,13 @@ struct Gcx
                 {
                     // disabled but out of memory => try to free some memory
                     minimizeAfterNextCollection = true;
-                    fullcollect(false, true);
+                    fullcollect(false, true, file, line);
                 }
             }
             else if (usedLargePages > 0)
             {
                 minimizeAfterNextCollection = true;
-                fullcollect();
+                fullcollect(false, false, file, line);
             }
             // If alloc didn't yet succeed retry now that we collected/minimized
             if (!pool && !tryAlloc() && !tryAllocNewPool())
@@ -3231,7 +3232,7 @@ Lmark:
         verbose_printf(1, "=====================================================\n\n");
 
         if (doFork && isFinal)
-            return fullcollect(true, false);
+            return fullcollect(true, false, file, line);
         return freedPages;
     }
 

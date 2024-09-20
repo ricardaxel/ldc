@@ -295,7 +295,7 @@ extern(C):
      * and then to reclaim free space.  This action may need to suspend all
      * running threads for at least part of the collection process.
      */
-    pragma(mangle, "gc_collect") static void collect() @safe nothrow pure;
+    pragma(mangle, "gc_collect") static void collect(string file = __FILE__, uint line = __LINE__) @safe nothrow pure;
 
     /**
      * Indicates that the managed memory space be minimized by returning free

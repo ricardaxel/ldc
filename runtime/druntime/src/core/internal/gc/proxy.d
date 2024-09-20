@@ -109,7 +109,7 @@ extern (C)
                 case "none":
                     break;
                 case "collect":
-                    instance.collect();
+                    instance.collect("gc termination", 0);
                     break;
                 case "finalize":
                     instance.runFinalizers((cast(ubyte*)null)[0 .. size_t.max]);
@@ -129,9 +129,9 @@ extern (C)
         instance.disable();
     }
 
-    void gc_collect() nothrow
+    void gc_collect(string file = __FILE__, uint line = __LINE__) nothrow
     {
-        instance.collect();
+        instance.collect(file, line);
     }
 
     void gc_minimize() nothrow
@@ -155,7 +155,7 @@ extern (C)
     }
 
     void* gc_malloc( size_t sz, uint ba = 0, const scope TypeInfo ti = null,
-                      DebugInfo di = DebugInfo.init) nothrow
+                     DebugInfo di = DebugInfo.init) nothrow
     {
         return instance.malloc(sz, ba, ti, di);
     }

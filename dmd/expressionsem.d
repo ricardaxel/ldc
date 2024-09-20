@@ -5364,6 +5364,8 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
 
                 arguments.push(new ArrayLiteralExp(exp.loc, Type.tsize_t.sarrayOf(nargs), exp.arguments));
                 arguments.push(new IntegerExp(exp.loc, tbn.isShared(), Type.tbool));
+                arguments.push(new StringExp(exp.loc, exp.loc.filename.toDString()));
+                arguments.push(new IntegerExp(exp.loc, exp.loc.linnum, Type.tint32));
 
                 lowering = new CallExp(exp.loc, lowering, arguments);
                 exp.lowering = lowering.expressionSemantic(sc);

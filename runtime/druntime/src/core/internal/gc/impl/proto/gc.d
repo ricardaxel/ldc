@@ -73,7 +73,7 @@ class ProtoGC : GC
         .gc_disable();
     }
 
-    void collect() nothrow
+    void collect(string file = "", uint line = 0) nothrow
     {
     }
 

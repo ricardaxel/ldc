@@ -53,7 +53,8 @@ interface GC
     /**
      *
      */
-    void collect() nothrow;
+    // TODO(gc-info): not the best to change GC interface
+    void collect(string file = __FILE__, uint line = __LINE__) nothrow;
 
     /**
      * minimize free space usage

@@ -76,7 +76,7 @@ class ManualGC : GC
     {
     }
 
-    void collect() nothrow
+    void collect(string file = "", uint line = 0) nothrow
     {
     }
 

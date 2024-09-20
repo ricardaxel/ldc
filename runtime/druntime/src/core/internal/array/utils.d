@@ -11,6 +11,7 @@ module core.internal.array.utils;
 
 import core.internal.traits : Parameters;
 import core.memory : GC;
+import core.internal.gc.gcdebug: DebugInfo;
 
 alias BlkInfo = GC.BlkInfo;
 alias BlkAttr = GC.BlkAttr;
@@ -186,7 +187,7 @@ void __arrayClearPad()(ref BlkInfo info, size_t arrSize, size_t padSize) nothrow
  * Returns:
  *  `BlkInfo` with allocation metadata
  */
-BlkInfo __arrayAlloc(T)(size_t arrSize) @trusted
+BlkInfo __arrayAlloc(T)(size_t arrSize, in string file, uint line) @trusted
 {
     import core.checkedint;
     import core.lifetime : TypeInfoSize;
@@ -213,7 +214,7 @@ BlkInfo __arrayAlloc(T)(size_t arrSize) @trusted
     static if (!hasIndirections!T)
         attr |= BlkAttr.NO_SCAN;
 
-    auto bi = GC.qalloc(paddedSize, attr, typeid(T));
+    auto bi = GC.qalloc(paddedSize, attr, typeid(T), DebugInfo.alloc(file, line, paddedSize, typeid(T)));
     __arrayClearPad(bi, arrSize, padSize);
     return bi;
 }

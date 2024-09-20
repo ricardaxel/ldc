@@ -192,9 +192,11 @@ pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
             return typeInfoToStr(ci.base);
         else
             return typeInfoToStr(ci.next);
-    else
-        name = typeid(ti).name;
 
+    // There exists a toString method for all TypeInfo subclasses
+    // but it is not @nogc..
+    else
+        name = typeid(ti).name; 
 
     // special cases
     if(name == "S2rt3aaA4Impl")
@@ -208,7 +210,7 @@ pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
     // TODO mixin version ?
     else if(name == "TypeInfo_i")
       return "int";
-    else if(name == "TypeInfo_k")
+    if(name == "TypeInfo_k")
       return "uint";
     else if(name == "TypeInfo_m")
       return "ulong";
@@ -238,6 +240,44 @@ pure string typeInfoToStr(const(TypeInfo) ti) nothrow @nogc
       return "double";
     else if(name == "TypeInfo_e")
       return "real";
+
+    // arrays
+    else if(name == "TypeInfo_Av")
+      return "void[]";
+    else if(name == "TypeInfo_Ah")
+      return "ubyte[]";
+    else if(name == "TypeInfo_Ab")
+      return "bool[]";
+    else if(name == "TypeInfo_Ag")
+      return "byte[]";
+    else if(name == "TypeInfo_Aa")
+      return "char[]";
+    else if(name == "TypeInfo_Axa")
+      return "const(char)[]";
+    else if(name == "TypeInfo_Aya")
+      return "immutable(char)[]";
+    else if(name == "TypeInfo_At")
+      return "ushort[]";
+    else if(name == "TypeInfo_As")
+      return "short[]";
+    else if(name == "TypeInfo_Au")
+      return "wchar[]";
+    else if(name == "TypeInfo_Ak")
+      return "uint[]";
+    else if(name == "TypeInfo_Ai")
+      return "int[]";
+    else if(name == "TypeInfo_Aw")
+      return "dchar[]";
+    else if(name == "TypeInfo_Am")
+      return "ulong[]";
+    else if(name == "TypeInfo_Al")
+      return "long[]";
+    else if(name == "TypeInfo_Af")
+      return "float[]";
+    else if(name == "TypeInfo_Ad")
+      return "double[]";
+    else if(name == "TypeInfo_Ae")
+      return "real[]";
 
     return name;
 }

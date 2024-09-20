@@ -9,6 +9,7 @@
 */
 module core.internal.array.construction;
 
+import core.internal.gc.gcdebug: DebugInfo;
 import core.internal.traits : Unqual;
 
 debug(PRINTF)
@@ -339,13 +340,15 @@ void _d_arraysetctor(Tarr : T[], T)(scope Tarr p, scope ref T value) @trusted
  * Returns:
  *      newly allocated array
  */
-T[] _d_newarrayUPureNothrow(T)(size_t length, bool isShared=false) pure nothrow @trusted
+T[] _d_newarrayUPureNothrow(T)(size_t length, bool isShared=false,
+                               in string file = "", uint line = 0) pure nothrow @trusted
 {
-    alias PureType = T[] function(size_t length, bool isShared) pure nothrow @trusted;
-    return (cast(PureType) &_d_newarrayU!T)(length, isShared);
+    alias PureType = T[] function(size_t length, bool isShared, in string file, uint line) pure nothrow @trusted;
+    return (cast(PureType) &_d_newarrayU!T)(length, isShared, file, line);
 }
 
-T[] _d_newarrayU(T)(size_t length, bool isShared=false) @trusted
+T[] _d_newarrayU(T)(size_t length, bool isShared=false,
+                    in string file = "", uint line = 0) @trusted
 {
     import core.exception : onOutOfMemoryError;
     import core.internal.traits : Unqual;
@@ -395,7 +398,7 @@ Loverflow:
     assert(0);
 
 Lcontinue:
-    auto info = __arrayAlloc!UnqT(arraySize);
+    auto info = __arrayAlloc!UnqT(arraySize, file, line);
     if (!info.base)
         goto Loverflow;
     debug(PRINTF) printf("p = %p\n", info.base);
@@ -408,9 +411,10 @@ Lcontinue:
 }
 
 /// ditto
-T[] _d_newarrayT(T)(size_t length, bool isShared=false) @trusted
+T[] _d_newarrayT(T)(size_t length, bool isShared=false,
+                    in string file = "", uint line = 0) @trusted
 {
-    T[] result = _d_newarrayU!T(length, isShared);
+    T[] result = _d_newarrayU!T(length, isShared, file, line);
 
     static if (__traits(isZeroInit, T))
     {
@@ -511,7 +515,8 @@ version (D_ProfileGC)
  * Returns:
  *    newly allocated array
  */
-Tarr _d_newarraymTX(Tarr : U[], T, U)(size_t[] dims, bool isShared=false) @trusted
+Tarr _d_newarraymTX(Tarr : U[], T, U)(size_t[] dims, bool isShared=false,
+                                      in string file = "", uint line = 0) @trusted
 {
     debug(PRINTF) printf("_d_newarraymTX(dims.length = %d)\n", dims.length);
 
@@ -529,13 +534,13 @@ Tarr _d_newarraymTX(Tarr : U[], T, U)(size_t[] dims, bool isShared=false) @trust
         debug(PRINTF) printf("__allocateInnerArray(UnqT = %s, dim = %lu, ndims = %lu\n", UnqT.stringof.ptr, dim, dims.length);
         if (dims.length == 1)
         {
-            auto r = _d_newarrayT!UnqT(dim, isShared);
+            auto r = _d_newarrayT!UnqT(dim, isShared, file, line);
             return *cast(void[]*)(&r);
         }
 
         auto allocSize = (void[]).sizeof * dim;
         // the array-of-arrays holds pointers! Don't use UnqT here!
-        auto info = __arrayAlloc!(void[])(allocSize);
+        auto info = __arrayAlloc!(void[])(allocSize, file, line);
         __setArrayAllocLength!(void[])(info, allocSize, isShared);
         auto p = __arrayStart(info)[0 .. dim];
 
