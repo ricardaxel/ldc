@@ -20,62 +20,62 @@ Example
 -------
 
 ```
->> cat test2.d
-import core.memory;
+>> cat -n test2.d
+     1  import core.memory;
+     2  import std.stdio;
+     3
+     4  class Bar {}
+     5
+     6  class Foo {
+     7    this() { new Bar; }
+     8  }
+     9
+    10
+    11  void allocFoo()
+    12  {
+    13    Foo f2 = new Foo;
+    14  }
+    15
+    16  void clearStack()
+    17  {
+    18    int[2048] x;
+    19  }
+    20
+    21  void main()
+    22  {
+    23    Foo f = new Foo;
+    24    allocFoo();
+    25
+    26    int a = 2;
+    27    auto dg = () => a++; // capturing a
+    28
+    29    clearStack();
+    30    GC.collect();
+    31  }
+    32
 
-class Bar { int bar; }
-
-class Foo {
-
-  this()
-  {
-    this.bar = new Bar;
-  }
-
-  Bar bar;
-}
-
-
-void func()
-{
-  Foo f2 = new Foo;
-  Foo f3 = new Foo;
-}
-
-int main()
-{
-  Foo f = new Foo;
-
-  func();
-  GC.collect();
-
-  return 0;
-}
 
 # compile without optimization
 >> ldc2 -g -O0 test2.d --disable-gc2stack --disable-d-passes --of test2
 
 >> ./test2 "--DRT-gcopt=cleanup:collect fork:0 parallel:0 verbose:2"
-[test2.d:24] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381000
-[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b381020
-[test2.d:18] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381040
-[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b381060
-[test2.d:19] new 'test2.Foo' (24 bytes) => p = 0x7fac0b381080
-[test2.d:9] new 'test2.Bar' (20 bytes) => p = 0x7fac0b3810a0
+[test2.d:21] captured data '[a]' (4 bytes) => p = 0x7f52d54b2000
+[test2.d:23] alloc 'test2.Foo' (16 bytes) => p = 0x7f52d54b2010
+[test2.d:7] alloc 'test2.Bar' (16 bytes) => p = 0x7f52d54b2020
+[test2.d:13] alloc 'test2.Foo' (16 bytes) => p = 0x7f52d54b2030
+[test2.d:7] alloc 'test2.Bar' (16 bytes) => p = 0x7f52d54b2040
 
-============ COLLECTION (from :0)  =============
-	============= SWEEPING ==============
+============ COLLECTION (from /home/axricard/others/forks/ldc/tests/gcinfo/test2.d:30)  =============
+        ============= SWEEPING ==============
+        Freeing test2.Bar (/home/axricard/others/forks/ldc/tests/gcinfo/test2.d:7; 16 bytes) -- AGE : 0/1
+        Freeing test2.Foo (/home/axricard/others/forks/ldc/tests/gcinfo/test2.d:13; 16 bytes) -- AGE : 0/1
+        Freeing test2.Bar (/home/axricard/others/forks/ldc/tests/gcinfo/test2.d:7; 16 bytes) -- AGE : 0/1
 =====================================================
 
 
-============ COLLECTION (from :0)  =============
-	============= SWEEPING ==============
-	Freeing test2.Foo (test2.d:24; 24 bytes) (0x7fac0b381000). AGE :  1/2
-	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b381020). AGE :  1/2
-	Freeing test2.Foo (test2.d:18; 24 bytes) (0x7fac0b381040). AGE :  1/2
-	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b381060). AGE :  1/2
-	Freeing test2.Foo (test2.d:19; 24 bytes) (0x7fac0b381080). AGE :  1/2
-	Freeing test2.Bar (test2.d:9; 20 bytes) (0x7fac0b3810a0). AGE :  1/2
+============ COLLECTION (from gc termination:0)  =============
+        ============= SWEEPING ==============
+        Freeing captured data [a] (/home/axricard/others/forks/ldc/tests/gcinfo/test2.d:21; 4 bytes) -- AGE : 1/2
 =====================================================
 
 ```
