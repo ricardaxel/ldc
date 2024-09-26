@@ -678,8 +678,12 @@ DSliceValue *DtoAppendDChar(const Loc &loc, DValue *arr, Expression *exp,
   LLSmallVector<LLValue *, 4> args;
   args.push_back(DtoLVal(arr));
   args.push_back(DtoBitCast(valueToAppend, fn->getFunctionType()->getParamType(1)));
-  args.push_back(DtoConstString(loc.filename()));
-  args.push_back(DtoConstUint(loc.linnum()));
+
+  if(strcmp(func, "_d_arrayappendcd"))
+  {
+    args.push_back(DtoConstString(loc.filename()));
+    args.push_back(DtoConstUint(loc.linnum()));
+  }
 
   // Call function (ref string x, dchar c)
   LLValue *newArray = gIR->CreateCallOrInvoke(fn, args,".appendedArray");

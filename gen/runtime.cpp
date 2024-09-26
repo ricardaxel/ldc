@@ -605,7 +605,7 @@ static void buildRuntimeModule() {
   // void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line)
   // void[] _d_arrayappendwd(ref byte[] x, dchar c, string file, uint line)
   createFwdDecl(LINK::c, voidArrayTy, {"_d_arrayappendcd", "_d_arrayappendwd"},
-                {voidArrayTy, dcharTy,  stringTy, uintTy}, {STCref, 0});
+                {voidArrayTy, dcharTy/*,  stringTy, uintTy*/}, {STCref, 0});
 
   // Object _d_newclass(const ClassInfo ci)
   createFwdDecl(LINK::c, objectTy, {"_d_newclass"},

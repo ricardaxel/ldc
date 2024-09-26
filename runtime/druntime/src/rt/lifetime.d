@@ -2023,7 +2023,7 @@ Params:
     c = `dchar` to append
 Returns: updated `x` cast to `void[]`
 */
-extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line) @weak
+extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c/*, string file, uint line*/) @weak
 {
     // c could encode into from 1 to 4 characters
     char[4] buf = void;
@@ -2068,7 +2068,7 @@ extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c, string file, uint line
 
     // Hack because _d_arrayappendT takes `x` as a reference
     auto xx = cast(shared(char)[])x;
-    object._d_arrayappendT(xx, cast(shared(char)[])appendthis, file, line);
+    object._d_arrayappendT(xx, cast(shared(char)[])appendthis, "", 0);
     x = cast(byte[])xx;
     return x;
 }
